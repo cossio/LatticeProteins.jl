@@ -1,0 +1,3 @@
+module LatticeProteins
+
+end # module

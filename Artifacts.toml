@@ -1,0 +1,6 @@
+[ContactMaps]
+git-tree-sha1 = "157810e52b4221c282b802a3983638d22a0b7963"
+
+    [[ContactMaps.download]]
+    sha256 = "aea2012ac4ba1f8f48dba36085e56fa2dd8f07697142a2d0e9552ee67055cd65"
+    url = "https://gist.github.com/cossio/edb11974c911bde554422209709266f5/raw/157810e52b4221c282b802a3983638d22a0b7963.tar.gz"

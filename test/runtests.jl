@@ -1,3 +1,1 @@
-using Test, SafeTestsets, LatticeProteins
-
-@safetestset "util" begin include("util.jl") end
+module util_tests include("util.jl") end

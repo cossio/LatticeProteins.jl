@@ -13,16 +13,16 @@ function onehot(seqs::AbstractVector{<:AbstractString})
     #return reshape(reduce(hcat, onehot.(seqs)), 21, L, length(seqs))
 end
 
-onehot(A::Union{AbstractVector{Int8}, AbstractMatrix{Int8}}) = reshape(A, 1, size(A)...) .== 1:21
+onehot(A::Union{AbstractVector{Int}, AbstractMatrix{Int}}) = reshape(A, 1, size(A)...) .== 1:21
 
 function aaseq(X::Union{BitMatrix, BitArray{3}})
     @assert size(X, 1) == 21
     return aaseq(potts(X))
 end
 
-aaseq(P::AbstractVector{Int8}) = join([AMINO_ACIDS[i] for i in P])
-aaseq(P::AbstractMatrix{Int8}) = [aaseq(view(P,:,n)) for n in axes(P, 2)]
+aaseq(P::AbstractVector{Int}) = join([AMINO_ACIDS[i] for i in P])
+aaseq(P::AbstractMatrix{Int}) = [aaseq(view(P,:,n)) for n in axes(P, 2)]
 
-potts(X::BitMatrix) = vec(Int8.(first.(Tuple.(argmax(X; dims=1)))))
-potts(X::BitArray{3}) = reshape(Int8.(first.(Tuple.(argmax(X; dims=1)))), size(X,2), size(X,3))
+potts(X::BitMatrix) = vec(Int.(first.(Tuple.(argmax(X; dims=1)))))
+potts(X::BitArray{3}) = reshape(Int.(first.(Tuple.(argmax(X; dims=1)))), size(X,2), size(X,3))
 potts(s::Union{AbstractString, AbstractVector{<:AbstractString}}) = potts(onehot(s))

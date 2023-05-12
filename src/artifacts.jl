@@ -14,10 +14,10 @@ end
 
 function Hugo_MSA(which::Symbol)
     path = Hugo_MSA_path(which)
-    return readdlm(path)[:,3]
+    return string.(readdlm(path)[:,3])
 end
 
 function Hugo_MSA_pnat(which::Symbol)
     path = Hugo_MSA_path(which)
-    return readdlm(path)[:,2]
+    return Float64.(readdlm(path)[:,2])
 end

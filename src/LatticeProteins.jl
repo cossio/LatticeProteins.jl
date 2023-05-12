@@ -12,5 +12,6 @@ include("contact_maps.jl")
 include("pnat.jl")
 include("onehot.jl")
 include("metropolis.jl")
+include("artifacts.jl")
 
 end # module

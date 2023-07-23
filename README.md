@@ -4,3 +4,11 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://cossio.github.io/LatticeProteins.jl/dev)
 ![](https://github.com/cossio/LatticeProteins.jl/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/cossio/LatticeProteins.jl/branch/main/graph/badge.svg?token=ZYj3NfqNvj)](https://codecov.io/gh/cossio/LatticeProteins.jl)
+
+Simulate the lattice proteins model in Julia. See references for the definition of the model.
+
+This package is registered at [MyPublicJuliaRegistry](https://github.com/cossio/MyPublicJuliaRegistry).
+
+# References
+
+* Jacquin, Hugo, et al. "Benchmarking inverse statistical approaches for protein structure and design with exactly solvable models." PLoS computational biology 12.5 (2016): e1004889.

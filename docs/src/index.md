@@ -1,1 +1,0 @@
-# LatticeProteins.jl Documentation

@@ -1,7 +1,7 @@
 name = "LatticeProteins"
 uuid = "2b3394db-9f9c-454f-a26a-0ad872321417"
 authors = "Jorge Fernandez-de-Cossio-Diaz <j.cossio.diaz@gmail.com>"
-version = "1.0.0-DEV"
+version = "1.0.0"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+## 1.0.0 - 2023-08-03
+
+- No changes.
+
 ## 0.1.0
 
-- Register at https://github.com/cossio/MyPublicJuliaRegistry.
+- Register at https://github.com/cossio/CossioJuliaRegistry.

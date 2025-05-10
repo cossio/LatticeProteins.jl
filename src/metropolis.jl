@@ -1,5 +1,5 @@
 function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real=1, nsteps::Int=1)
-    @assert length(seq) == 27 && all(1 ≤ a ≤ 20, seq)
+    @assert length(seq) == 27 && all(a -> 1 ≤ a ≤ 20, seq)
     E = -log_pnat(cm, seq)
     for _ = 1:nsteps
         i = rand(1:length(seq)) # randomly select a position in the sequence

@@ -2,7 +2,12 @@
 
 Simulate the lattice proteins model in Julia. See references for the definition of the model.
 
-This package is registered at https://github.com/cossio/CossioJuliaRegistry.
+This package is registered. To install, use the Julia package manager:
+
+```julia
+import Pkg
+Pkg.add("LatticeProteins")
+```
 
 # References
 

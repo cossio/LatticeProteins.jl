@@ -1,5 +1,7 @@
 .DS_Store
 .vscode
+Manifest.toml
+*/Manifest.toml
 /docs/build/
 /docs/site/
 *.jl.cov

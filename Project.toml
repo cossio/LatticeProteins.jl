@@ -3,6 +3,9 @@ uuid = "2b3394db-9f9c-454f-a26a-0ad872321417"
 authors = "Jorge FdCD <jorge.fdcd@icloud.com>"
 version = "1.0.1"
 
+[workspace]
+projects = ["test"]
+
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"

@@ -7,7 +7,6 @@ using Random: seed!
     @testset "metropolis!" begin
         seed!(42)
         seq = rand(1:20, L)
-        seq_copy = copy(seq)
 
         # metropolis! returns the modified sequence
         result = metropolis!(seq, CONTACT_MAP_A; β=1, nsteps=1)

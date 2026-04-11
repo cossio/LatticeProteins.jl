@@ -27,6 +27,9 @@ using Statistics: mean
             @test isa(pnats, Vector{Float64})
             @test length(pnats) == length(msa)
             @test all(0 .< pnats .≤ 1)
+
+            # Verify pnat consistency for first entry
+            @test pnat(cm, potts(msa[1])) ≈ pnats[1]
         end
     end
 

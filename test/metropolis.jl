@@ -24,13 +24,13 @@ using Random: seed!
         # and produce a valid pnat value, but the final state is not guaranteed
         # to have higher pnat than the initial state under Metropolis sampling.
         seed!(123)
-        seq3 = rand(1:20, 27)
+        seq3 = rand(1:20, L)
         pnat_before = pnat(CONTACT_MAP_A, seq3)
         metropolis!(seq3, CONTACT_MAP_A; β=100, nsteps=200)
         pnat_after = pnat(CONTACT_MAP_A, seq3)
         @test 0 ≤ pnat_before ≤ 1
         @test 0 ≤ pnat_after ≤ 1
-        @test length(seq3) == 27
+        @test length(seq3) == L
         @test all(1 .≤ seq3 .≤ 20)
     end
 

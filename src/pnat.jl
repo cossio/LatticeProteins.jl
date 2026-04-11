@@ -5,7 +5,8 @@ Compute the contact energy of amino acid sequence `seq` in structure `cm`.
 
 The energy is the sum of Miyazawa-Jernigan interaction energies over all contacting
 residue pairs in the given structure. `seq` must be a vector of length 27 with
-integer amino acid indices in `1:20`. `cm` is the structure index (1 to [`N_STRUCTURES`](@ref)).
+integer amino acid indices in `1:20`. `cm` is the structure index in `1:10000`
+(see [`N_STRUCTURES`](@ref)).
 """
 function energy(cm::Int, seq::AbstractVector{Int})
     @assert length(seq) == 27

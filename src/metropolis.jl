@@ -40,7 +40,7 @@ Generate a random multiple sequence alignment (MSA) of `nseqs` sequences that fo
 structure `cm`, using Metropolis Monte Carlo sampling.
 
 Each sequence is initialized randomly and then evolved for `nsteps` Metropolis steps
-at inverse temperature `β`. Returns an `Matrix{Int}` of size `(27, nseqs)`, where each
+at inverse temperature `β`. Returns a `Matrix{Int}` of size `(27, nseqs)`, where each
 column is an integer-coded amino acid sequence.
 
 See also [`metropolis!`](@ref).

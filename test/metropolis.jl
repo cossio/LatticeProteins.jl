@@ -6,24 +6,24 @@ using Random: seed!
 @testset "metropolis" begin
     @testset "metropolis!" begin
         seed!(42)
-        seq = rand(1:20, 27)
+        seq = rand(1:20, L)
         seq_copy = copy(seq)
 
         # metropolis! returns the modified sequence
         result = metropolis!(seq, CONTACT_MAP_A; β=1, nsteps=1)
         @test result === seq  # returns the same array (in-place)
-        @test length(seq) == 27
+        @test length(seq) == L
         @test all(1 .≤ seq .≤ 20)
 
         # With nsteps=0, sequence should not change
-        seq2 = rand(1:20, 27)
+        seq2 = rand(1:20, L)
         seq2_copy = copy(seq2)
         metropolis!(seq2, CONTACT_MAP_A; β=1, nsteps=0)
         @test seq2 == seq2_copy
 
         # With high β and many steps, pnat should increase (designed sequence)
         seed!(123)
-        seq3 = rand(1:20, 27)
+        seq3 = rand(1:20, L)
         pnat_before = pnat(CONTACT_MAP_A, seq3)
         metropolis!(seq3, CONTACT_MAP_A; β=100, nsteps=200)
         pnat_after = pnat(CONTACT_MAP_A, seq3)

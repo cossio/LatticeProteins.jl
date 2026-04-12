@@ -104,7 +104,6 @@ using Random: seed!
         # similar to the Hugo MSAs.
         seed!(42)
         seq = rand(1:20, L)
-        initial_pnat = pnat(CONTACT_MAP_A, seq)
 
         # After sufficient steps at β = 1000, pnat should be high
         metropolis!(seq, CONTACT_MAP_A; β=1000, nsteps=5000)

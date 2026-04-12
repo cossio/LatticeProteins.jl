@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "LatticeProteins.jl"
+version: 1.0.1
+license: MIT
+repository-code: "https://github.com/cossio/LatticeProteins.jl"
+authors:
+  - family-names: "Fernandez-de-Cossio-Diaz"
+    given-names: "Jorge"
+    email: "jorge.fdcd@icloud.com"
+preferred-citation:
+  type: conference-paper
+  title: "Accelerated Sampling with Stacked Restricted Boltzmann Machines"
+  authors:
+    - family-names: "Fernandez-de-Cossio-Diaz"
+      given-names: "Jorge"
+    - family-names: "Roussel"
+      given-names: "Clément"
+    - family-names: "Cocco"
+      given-names: "Simona"
+    - family-names: "Monasson"
+      given-names: "Remi"
+  year: 2024
+  collection-title: "The Twelfth International Conference on Learning Representations"
+  url: "https://openreview.net/forum?id=kXNJ48Hvw1"

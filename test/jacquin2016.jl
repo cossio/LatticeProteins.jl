@@ -14,14 +14,26 @@ using Random: seed!
 @testset "jacquin2016" begin
     @testset "pnat normalization" begin
         # pnat defines a probability distribution over structures for any sequence.
-        # The sum of pnat over all 10,000 structures must equal 1.
+        # Compute the full energy vector once, derive the normalized probabilities,
+        # and verify both normalization and a few representative pnat values.
         for seq_str in ["EKAMPAMDPDMAHEHKKKIRAWMFEGE",  # Hugo MSA A
                         "PDRFIVQCLAQFEHFERDGDKDMRAEC",  # Hugo MSA B
                         "WRFQDPGRCEEEDERMCGPEMCRCRQK",  # Hugo MSA D
                         "CMFILVWYAGTSNQDEHRKPCMFILVW"]  # arbitrary sequence
             seq = potts(seq_str)
-            pnat_sum = sum(pnat(s, seq) for s in 1:N_STRUCTURES)
-            @test pnat_sum ≈ 1.0 atol=1e-10
+            energies = [energy(s, seq) for s in 1:N_STRUCTURES]
+
+            # Compute log(sum(exp.(-energies))) stably.
+            neg_energies = .-energies
+            max_neg_energy = maximum(neg_energies)
+            logZ = max_neg_energy + log(sum(exp.(neg_energies .- max_neg_energy)))
+
+            pnats = exp.(-energies .- logZ)
+            @test sum(pnats) ≈ 1.0 atol=1e-10
+
+            for cm in (1, 2, 3, N_STRUCTURES ÷ 2, N_STRUCTURES - 1, N_STRUCTURES)
+                @test pnat(cm, seq) ≈ pnats[cm]
+            end
         end
     end
 

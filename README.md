@@ -83,20 +83,11 @@ pnat_values = Hugo_MSA_pnat(:A)
 
 ## Citation
 
-If you use this package in your research, please cite:
+If you use this package, please cite:
 
-- Fernandez-de-Cossio-Diaz, Jorge, et al. ["Accelerated Sampling with Stacked Restricted Boltzmann Machines."](https://openreview.net/forum?id=kXNJ48Hvw1) *The Twelfth International Conference on Learning Representations* (2024).
+Fernandez-de-Cossio-Diaz, Jorge, Clément Roussel, Simona Cocco, and Remi Monasson. ["Accelerated Sampling with Stacked Restricted Boltzmann Machines."](https://openreview.net/forum?id=kXNJ48Hvw1) *The Twelfth International Conference on Learning Representations* (2024).
 
-```bibtex
-@inproceedings{
-fernandez-de-cossio-diaz2024accelerated,
-title={Accelerated Sampling with Stacked Restricted Boltzmann Machines},
-author={Jorge Fernandez-de-Cossio-Diaz and Cl{\'e}ment Roussel and Simona Cocco and Remi Monasson},
-booktitle={The Twelfth International Conference on Learning Representations},
-year={2024},
-url={https://openreview.net/forum?id=kXNJ48Hvw1}
-}
-```
+A BibTeX entry is available in [CITATION.bib](CITATION.bib).
 
 ## References
 

@@ -81,6 +81,23 @@ pnat_values = Hugo_MSA_pnat(:A)
 | `Hugo_MSA_pnat(which)` | Load reference pnat values |
 | `MJ` | 20×20 Miyazawa-Jernigan interaction matrix |
 
+## Citation
+
+If you use this package in your research, please cite:
+
+- Fernandez-de-Cossio-Diaz, Jorge, et al. ["Accelerated Sampling with Stacked Restricted Boltzmann Machines."](https://openreview.net/forum?id=kXNJ48Hvw1) *The Twelfth International Conference on Learning Representations* (2024).
+
+```bibtex
+@inproceedings{
+fernandez-de-cossio-diaz2024accelerated,
+title={Accelerated Sampling with Stacked Restricted Boltzmann Machines},
+author={Jorge Fernandez-de-Cossio-Diaz and Cl{\'e}ment Roussel and Simona Cocco and Remi Monasson},
+booktitle={The Twelfth International Conference on Learning Representations},
+year={2024},
+url={https://openreview.net/forum?id=kXNJ48Hvw1}
+}
+```
+
 ## References
 
 - Jacquin, Hugo, et al. ["Benchmarking inverse statistical approaches for protein structure and design with exactly solvable models."](https://doi.org/10.1371/journal.pcbi.1004889) *PLoS computational biology* 12.5 (2016): e1004889.

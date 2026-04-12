@@ -83,4 +83,4 @@ pnat_values = Hugo_MSA_pnat(:A)
 
 ## References
 
-- Jacquin, Hugo, et al. "Benchmarking inverse statistical approaches for protein structure and design with exactly solvable models." *PLoS computational biology* 12.5 (2016): e1004889.
+- Jacquin, Hugo, et al. ["Benchmarking inverse statistical approaches for protein structure and design with exactly solvable models."](https://doi.org/10.1371/journal.pcbi.1004889) *PLoS computational biology* 12.5 (2016): e1004889.

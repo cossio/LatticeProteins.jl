@@ -41,8 +41,7 @@ using Random: seed!
         # The Hugo MSAs were sampled at β = 1000 (see first column of .msa files).
         # At this inverse temperature, sequences should have very high pnat (≥ 0.97).
         # The mean pnat should be approximately 0.995.
-        for (sym, cm) in [(:A, CONTACT_MAP_A), (:B, CONTACT_MAP_B),
-                          (:C, CONTACT_MAP_C), (:D, CONTACT_MAP_D)]
+        for sym in [:A, :B, :C, :D]
             pnats = Hugo_MSA_pnat(sym)
 
             # All sequences in the Hugo MSA should have high pnat

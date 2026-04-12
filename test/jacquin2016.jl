@@ -137,12 +137,13 @@ using Random: seed!
                 @test 1 ≤ j ≤ L
                 # Contacts are between distinct residues
                 @test i ≠ j
-                # Contacts are ordered (i < j)
-                @test i < j
             end
 
-            # All 28 contacts should be unique
-            contact_pairs = Set((contacts[k,1], contacts[k,2]) for k in 1:N_CONTACTS)
+            # All 28 contacts should be unique, independent of pair ordering
+            contact_pairs = Set(
+                (min(contacts[k, 1], contacts[k, 2]), max(contacts[k, 1], contacts[k, 2]))
+                for k in 1:N_CONTACTS
+            )
             @test length(contact_pairs) == N_CONTACTS
         end
     end

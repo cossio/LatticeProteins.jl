@@ -87,7 +87,7 @@ If you use this package, please cite:
 
 Fernandez-de-Cossio-Diaz, Jorge, Clément Roussel, Simona Cocco, and Remi Monasson. ["Accelerated Sampling with Stacked Restricted Boltzmann Machines."](https://openreview.net/forum?id=kXNJ48Hvw1) *The Twelfth International Conference on Learning Representations* (2024).
 
-Citation metadata is available in [CITATION.cff](CITATION.cff) and a BibTeX entry in [CITATION.bib](CITATION.bib).
+Citation metadata is available in [CITATION.cff](CITATION.cff).
 
 ## References
 

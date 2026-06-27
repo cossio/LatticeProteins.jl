@@ -24,6 +24,6 @@ jobs:
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # authentication for same-repo deploys / PR previews
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}  # SSH deploy key (preferred; enables fork PR previews)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # authentication for same-repo deploys and PR previews
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}  # SSH deploy key (preferred: its pushes trigger a GitHub Pages rebuild, unlike GITHUB_TOKEN). Secrets are unavailable to PRs from forks, so neither enables fork previews.
         run: julia --project=docs docs/make.jl

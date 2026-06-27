@@ -4,6 +4,10 @@
 # amino acid sequences, computing contact energies and folding probabilities, and
 # sampling sequences that fold into a target structure.
 
+# ```@meta
+# CurrentModule = LatticeProteins
+# ```
+
 # ## Setup
 #
 # Since the package does not export any symbols, we import the names we need

@@ -8,6 +8,10 @@ This page documents all symbols provided by `LatticeProteins.jl`. None of them a
 exported, so they must be accessed with the `LatticeProteins.` prefix or imported
 explicitly (e.g. `using LatticeProteins: pnat`).
 
+```@docs
+LatticeProteins
+```
+
 ## Structures and contact maps
 
 ```@docs

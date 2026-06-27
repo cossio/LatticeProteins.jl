@@ -1,5 +1,8 @@
 # LatticeProteins.jl
 
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://cossio.github.io/LatticeProteins.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://cossio.github.io/LatticeProteins.jl/dev/)
+
 Simulate the lattice proteins model on a 3×3×3 cubic lattice in Julia.
 
 In this model, a protein is represented as a chain of 27 amino acids that folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix. The probability that a sequence folds into a given "native" structure is computed via a Boltzmann distribution over 10,000 pre-computed compact structures.

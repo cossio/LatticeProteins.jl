@@ -28,8 +28,9 @@ reverse_structure(cm) = [L + 1 - cm[k, 3 - c] for k in axes(cm, 1), c in 1:2]
 
     keys = Set(contact_key(ALL[:, s, :]) for s in axes(ALL, 2))
     @test length(keys) == size(ALL, 2) # no duplicates
-    # the set is closed under chain reversal
+    # the set is closed under chain reversal; a few structures are their own reversal
     @test all(contact_key(reverse_structure(ALL[:, s, :])) in keys for s in axes(ALL, 2))
+    @test count(contact_key(reverse_structure(ALL[:, s, :])) == contact_key(ALL[:, s, :]) for s in axes(ALL, 2)) == 62
     # the 10,000 reference structures are among them
     @test all(contact_key(CONTACT_MAPS[:, s, :]) in keys for s in 1:N_STRUCTURES)
     # deterministic order

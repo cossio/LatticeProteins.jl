@@ -13,13 +13,19 @@ function energy(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int
     check_sequence(seq)
     check_structures(structures)
     checkbounds(structures, :, cm, :)
-    E = 0.0
+    return structure_energy(seq, structures, cm)
+end
+
+# Contact energy of `seq` in structure `s` of `structures`. Assumes `seq` has been validated
+# with `check_sequence` and that `s` is a valid structure index.
+function structure_energy(seq::AbstractVector{Int}, structures::AbstractArray{Int,3}, s::Int)
+    e = 0.0
     for k in axes(structures, 1)
-        @inbounds i, j = structures[k, cm, 1], structures[k, cm, 2]
+        @inbounds i, j = structures[k, s, 1], structures[k, s, 2]
         a, b = seq[i], seq[j]
-        @inbounds E += MJ[a, b] # a, b ∈ 1:20 by check_sequence
+        @inbounds e += MJ[a, b] # a, b ∈ 1:20 by check_sequence
     end
-    return E
+    return e
 end
 
 """
@@ -42,13 +48,7 @@ end
 function energies!(E::Vector{Float64}, seq::AbstractVector{Int}, structures::AbstractArray{Int,3})
     @assert length(E) == size(structures, 2)
     for s in axes(structures, 2)
-        e = 0.0
-        for k in axes(structures, 1)
-            @inbounds i, j = structures[k, s, 1], structures[k, s, 2]
-            a, b = seq[i], seq[j]
-            @inbounds e += MJ[a, b] # a, b ∈ 1:20 by check_sequence
-        end
-        E[s] = e
+        E[s] = structure_energy(seq, structures, s)
     end
     return E
 end

@@ -1,6 +1,6 @@
 using Test: @test, @testset
-using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat,
-    CONTACT_MAP_A, CONTACT_MAPS, L
+using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat, energies,
+    SiteContacts, mutate_energies!, CONTACT_MAP_A, CONTACT_MAPS, L
 using Random: seed!, randexp
 
 # Reference implementation that recomputes log_pnat from scratch at every step, with the
@@ -53,6 +53,20 @@ end
     end
 
     @testset "incremental energies match recomputation" begin
+        seed!(6)
+        sites = SiteContacts(CONTACT_MAPS)
+        seq = rand(1:20, L)
+        E = energies(seq)
+        E1 = similar(E)
+        for _ in 1:50
+            i = rand(1:L)
+            new_aa = rand(1:20)
+            mutate_energies!(E1, E, seq, i, new_aa, sites)
+            seq[i] = new_aa
+            @test E1 ≈ energies(seq) atol=1e-10
+            E, E1 = E1, E
+        end
+
         seed!(7)
         seq0 = rand(1:20, L)
         for β in (1, 10, 100)

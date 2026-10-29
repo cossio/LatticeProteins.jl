@@ -67,6 +67,21 @@ function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real=1, nsteps::Int=
     return metropolis!(seq, cm, structures, SiteContacts(structures); β, nsteps)
 end
 
+# Given the energies `E` of `seq` in all structures, writes into `E1` the energies of the
+# sequence obtained by mutating position `i` of `seq` to amino acid `new_aa`, visiting only
+# the contacts that involve position `i`. Assumes `seq` has been validated with
+# `check_sequence`, and `sites == SiteContacts(structures)` for the structures of `E`.
+function mutate_energies!(E1::Vector{Float64}, E::Vector{Float64}, seq::AbstractVector{Int}, i::Int, new_aa::Int, sites::SiteContacts)
+    copyto!(E1, E)
+    old_aa = seq[i]
+    # energy change of a contact between position i and an amino acid b
+    ΔE = ntuple(b -> MJ[new_aa, b] - MJ[old_aa, b], Val(20))
+    @inbounds for t in sites.offsets[i]:(sites.offsets[i + 1] - 1)
+        E1[sites.structure[t]] += ΔE[seq[sites.partner[t]]]
+    end
+    return E1
+end
+
 # Assumes `seq` has been validated with `check_sequence`, and `sites == SiteContacts(structures)`.
 function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArray{Int,3}, sites::SiteContacts; β::Real, nsteps::Int)
     E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures) # energies of seq in all structures
@@ -74,14 +89,12 @@ function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArra
     F = E[cm] + logsumexp_neg(E) # -log_pnat
     for _ = 1:nsteps
         i = rand(1:length(seq)) # randomly select a position in the sequence
-        old_aa = seq[i]
         new_aa = rand(1:20)
-        copyto!(E1, E)
-        # only contacts involving position i change energy
-        @inbounds for t in sites.offsets[i]:(sites.offsets[i + 1] - 1)
-            b = seq[sites.partner[t]]
-            E1[sites.structure[t]] += MJ[new_aa, b] - MJ[old_aa, b]
+        if new_aa == seq[i]
+            randexp() # nothing changes; keep the random stream as if the move were evaluated
+            continue
         end
+        mutate_energies!(E1, E, seq, i, new_aa, sites)
         F1 = E1[cm] + logsumexp_neg(E1)
         if β * (F1 - F) < randexp()
             seq[i] = new_aa # accept move

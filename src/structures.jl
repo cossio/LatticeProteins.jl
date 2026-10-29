@@ -29,10 +29,13 @@ function lattice_symmetries()
     return syms
 end
 
-# Whether `path` is lexicographically no larger than each of its images under `symmetries`.
-function is_canonical(path::Vector{Int}, symmetries::Vector{Vector{Int}})
+# Whether the first `depth` sites of `path` are lexicographically no larger than their image
+# under each of the `symmetries`. The lexicographic comparison of a walk with its image is
+# decided by the first site where they differ, so a prefix that is larger than its image
+# cannot be extended to a canonical walk.
+function is_canonical(path::Vector{Int}, depth::Int, symmetries::Vector{Vector{Int}})
     for g in symmetries
-        for i in 1:L
+        for i in 1:depth
             a, b = path[i], g[path[i]]
             b < a && return false
             b > a && break
@@ -41,13 +44,13 @@ function is_canonical(path::Vector{Int}, symmetries::Vector{Vector{Int}})
     return true
 end
 
-# Depth-first extension of `path` (which occupies `depth` sites so far) over all
-# self-avoiding continuations. Complete walks that are canonical are converted to a
-# contact map (flattened as `[i1, j1, i2, j2, ...]`) and appended to `out`.
+# Depth-first extension of `path` (which occupies `depth` sites so far, and is canonical)
+# over all self-avoiding continuations, pruning the ones that are not canonical. Complete
+# walks are converted to a contact map (flattened as `[i1, j1, i2, j2, ...]`) and appended
+# to `out`.
 function walk!(out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, used::UInt32,
                depth::Int, nbrs::Vector{Vector{Int}}, stabilizer::Vector{Vector{Int}})
     if depth == L
-        is_canonical(path, stabilizer) || return
         contacts = Tuple{Int,Int}[]
         for s in 1:L, u in nbrs[s]
             u > s || continue
@@ -68,7 +71,9 @@ function walk!(out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, us
         if (used & (UInt32(1) << u)) == 0
             path[depth + 1] = u
             pos[u] = depth + 1
-            walk!(out, path, pos, used | (UInt32(1) << u), depth + 1, nbrs, stabilizer)
+            if is_canonical(path, depth + 1, stabilizer)
+                walk!(out, path, pos, used | (UInt32(1) << u), depth + 1, nbrs, stabilizer)
+            end
         end
     end
 end
@@ -78,9 +83,10 @@ end
 
 Enumerate all maximally compact structures of a 27-mer on the 3×3×3 cubic lattice, that is,
 all self-avoiding walks visiting the 27 lattice sites, modulo the 48 rotations and
-reflections of the cube. There are 103,346 of them. The chain direction is kept: a structure
-and its chain reversal are distinct structures, since they place residue 1 at different ends
-of the walk and have different contact maps.
+reflections of the cube. There are 103,346 of them. The chain direction is kept: reversing
+the chain maps contact `(i, j)` to `(28 - j, 28 - i)`, which in general gives a different
+contact map, so a structure and its chain reversal count as distinct structures (62 of
+them are their own reversal).
 
 Returns an `Array{Int, 3}` of size `(28, 103346, 2)` with the same layout as
 [`CONTACT_MAPS`](@ref): `structures[:, s, :]` gives the 28 contact pairs of structure `s`,
@@ -113,7 +119,7 @@ function enumerate_structures()
     # centres). Every walk is the image under a cube symmetry of one starting from the
     # corner (0,0,0) or from the face centre (1,1,0), so it suffices to start from these two
     # sites and keep the walks that are minimal among their images under the symmetries
-    # fixing the starting site.
+    # fixing the starting site (the stabilizer).
     for s0 in (lattice_site(0, 0, 0), lattice_site(1, 1, 0))
         stabilizer = [g for g in syms if g[s0] == s0 && g != 1:L]
         path = zeros(Int, L)

@@ -7,3 +7,4 @@ module Hugo_MSAs_tests include("Hugo_MSAs.jl") end
 module metropolis_tests include("metropolis.jl") end
 module jacquin2016_tests include("jacquin2016.jl") end
 module structures_tests include("structures.jl") end
+module tubiana2019_tests include("tubiana2019.jl") end

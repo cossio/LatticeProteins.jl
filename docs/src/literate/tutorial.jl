@@ -16,10 +16,12 @@
 
 using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts, AMINO_ACIDS,
     metropolis!, random_msa, CONTACT_MAP_A, CONTACT_MAP_B,
-    CONTACT_MAPS, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat
+    CONTACT_MAPS, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat,
+    enumerate_structures, structure_index
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
-# The package ships with 10,000 pre-computed compact structures (contact maps):
+# The package ships with the 10,000 reference compact structures (contact maps) used by
+# Jacquin et al. (2016):
 
 N_STRUCTURES
 
@@ -63,8 +65,8 @@ energy(CONTACT_MAP_A, seq)
 energy(CONTACT_MAP_B, seq)
 
 # The probability that a sequence folds into a particular "native" structure is given
-# by a Boltzmann distribution over all 10,000 competing structures. This is
-# [`pnat`](@ref) (and its logarithm [`log_pnat`](@ref)):
+# by a Boltzmann distribution over the competing structures, by default the 10,000
+# reference ones. This is [`pnat`](@ref) (and its logarithm [`log_pnat`](@ref)):
 
 pnat(CONTACT_MAP_A, seq)
 
@@ -94,6 +96,40 @@ mean(pnat(CONTACT_MAP_A, col) for col in eachcol(msa))
 s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 metropolis!(s, CONTACT_MAP_A; β = 100, nsteps = 200)
 pnat(CONTACT_MAP_A, s)
+
+# ## Summing over all compact structures
+#
+# The 10,000 structures in `CONTACT_MAPS` are the reference set used by Jacquin et al.
+# (2016), but they are only a subset of the 103,346 maximally compact structures of a
+# 27-mer on the 3×3×3 lattice (counted up to rotations and reflections of the cube; a
+# structure and its chain reversal are distinct). [`enumerate_structures`](@ref) generates
+# all of them in a few seconds, in the same layout as `CONTACT_MAPS`:
+
+ALL = enumerate_structures()
+size(ALL)
+
+# Structure indices differ between the two sets. [`structure_index`](@ref) finds a
+# reference structure in the full set:
+
+a = structure_index(ALL, CONTACT_MAP_A)
+
+# All functions accept the set of competing structures through the `structures` keyword
+# argument. The full set contains more competitors, so the folding probability of a
+# sequence can only decrease:
+
+pnat(CONTACT_MAP_A, seq)
+
+#-
+
+pnat(a, seq; structures = ALL)
+
+# Sampling works the same way. The sampler keeps the energies of all structures and
+# updates them incrementally after each mutation, so a step costs about a millisecond
+# even with the full set:
+
+s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
+metropolis!(s, a; β = 100, nsteps = 200, structures = ALL)
+pnat(a, s; structures = ALL)
 
 # ## Reference datasets
 #

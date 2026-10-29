@@ -1,7 +1,25 @@
 using Test: @test, @testset
 using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat,
-    CONTACT_MAP_A, L
-using Random: seed!
+    CONTACT_MAP_A, CONTACT_MAPS, L
+using Random: seed!, randexp
+
+# Reference implementation that recomputes log_pnat from scratch at every step, with the
+# same sequence of random draws as metropolis!.
+function naive_metropolis!(seq, cm; β, nsteps, structures)
+    E = -log_pnat(cm, seq; structures)
+    for _ = 1:nsteps
+        i = rand(1:length(seq))
+        old_aa = seq[i]
+        seq[i] = rand(1:20)
+        E1 = -log_pnat(cm, seq; structures)
+        if β * (E1 - E) < randexp()
+            E = E1
+        else
+            seq[i] = old_aa
+        end
+    end
+    return seq
+end
 
 @testset "metropolis" begin
     @testset "metropolis!" begin
@@ -32,6 +50,28 @@ using Random: seed!
         @test 0 ≤ pnat_after ≤ 1
         @test length(seq3) == L
         @test all(1 .≤ seq3 .≤ 20)
+    end
+
+    @testset "incremental energies match recomputation" begin
+        seed!(7)
+        seq0 = rand(1:20, L)
+        for β in (1, 10, 100)
+            seed!(8)
+            seq1 = metropolis!(copy(seq0), CONTACT_MAP_A; β, nsteps=300)
+            seed!(8)
+            seq2 = naive_metropolis!(copy(seq0), CONTACT_MAP_A; β, nsteps=300, structures=CONTACT_MAPS)
+            @test seq1 == seq2
+            @test seq1 != seq0
+        end
+
+        seed!(5)
+        msa = random_msa(CONTACT_MAP_A; nseqs=3, β=10, nsteps=50)
+        seed!(5)
+        seqs = rand(1:20, L, 3)
+        for n in 1:3
+            naive_metropolis!(view(seqs, :, n), CONTACT_MAP_A; β=10, nsteps=50, structures=CONTACT_MAPS)
+        end
+        @test msa == seqs
     end
 
     @testset "random_msa" begin

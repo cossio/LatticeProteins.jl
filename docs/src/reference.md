@@ -24,12 +24,15 @@ CONTACT_MAP_B
 CONTACT_MAP_C
 CONTACT_MAP_D
 load_contact_maps
+enumerate_structures
+structure_index
 ```
 
 ## Energy and folding probability
 
 ```@docs
 energy
+energies
 pnat
 log_pnat
 ```

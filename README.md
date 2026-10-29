@@ -5,7 +5,7 @@
 
 Simulate the lattice proteins model on a 3×3×3 cubic lattice in Julia.
 
-In this model, a protein is represented as a chain of 27 amino acids that folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix. The probability that a sequence folds into a given "native" structure is computed via a Boltzmann distribution over 10,000 pre-computed compact structures.
+In this model, a protein is represented as a chain of 27 amino acids that folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix. The probability that a sequence folds into a given "native" structure is computed via a Boltzmann distribution over the competing compact structures: by default the 10,000 reference structures of Jacquin et al. (2016), or optionally all 103,346 compact structures of the lattice.
 
 ## Installation
 
@@ -37,6 +37,12 @@ s = aaseq(X)
 # Generate sequences that fold into structure A via Metropolis sampling
 msa = random_msa(CONTACT_MAP_A; nseqs=100, β=100, nsteps=1000)
 
+# Compete against all 103,346 compact structures instead of the 10,000 reference ones
+ALL = enumerate_structures()                 # takes a few seconds
+a = structure_index(ALL, CONTACT_MAP_A)      # index of structure A in ALL
+p_all = pnat(a, seq; structures=ALL)
+msa_all = random_msa(a; nseqs=100, β=100, nsteps=1000, structures=ALL)
+
 # Load reference MSA datasets from Jacquin et al. (2016)
 sequences = Hugo_MSA(:A)
 pnat_values = Hugo_MSA_pnat(:A)
@@ -48,8 +54,10 @@ pnat_values = Hugo_MSA_pnat(:A)
 
 | Symbol | Description |
 |--------|-------------|
-| `CONTACT_MAPS` | Pre-loaded contact maps for 10,000 compact structures |
-| `N_STRUCTURES` | Total number of structures (10,000) |
+| `CONTACT_MAPS` | Pre-loaded contact maps of the 10,000 reference compact structures |
+| `N_STRUCTURES` | Number of reference structures (10,000) |
+| `enumerate_structures()` | Generate the contact maps of all 103,346 compact structures |
+| `structure_index(structures, cm)` | Index of a contact map within a set of structures |
 | `CONTACT_MAP_A`, `CONTACT_MAP_B`, `CONTACT_MAP_C`, `CONTACT_MAP_D` | Indices of four reference structures from Jacquin et al. (2016) |
 
 ### Energy and folding probability
@@ -57,8 +65,11 @@ pnat_values = Hugo_MSA_pnat(:A)
 | Function | Description |
 |----------|-------------|
 | `energy(cm, seq)` | Contact energy of sequence `seq` in structure `cm` |
+| `energies(seq)` | Contact energies of `seq` in every structure |
 | `pnat(cm, seq)` | Probability that `seq` folds into structure `cm` |
 | `log_pnat(cm, seq)` | Log-probability of folding |
+
+All of these take a `structures` keyword argument selecting the set of competing structures (default: `CONTACT_MAPS`).
 
 ### Sequence encoding
 
@@ -73,8 +84,8 @@ pnat_values = Hugo_MSA_pnat(:A)
 
 | Function | Description |
 |----------|-------------|
-| `metropolis!(seq, cm; β, nsteps)` | In-place Metropolis sampling of a sequence |
-| `random_msa(cm; nseqs, β, nsteps)` | Generate a random MSA via Metropolis sampling |
+| `metropolis!(seq, cm; β, nsteps, structures)` | In-place Metropolis sampling of a sequence |
+| `random_msa(cm; nseqs, β, nsteps, structures)` | Generate a random MSA via Metropolis sampling |
 
 ### Reference data
 

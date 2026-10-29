@@ -24,6 +24,10 @@ using LatticeProteins: pnat, potts, energy, log_pnat,
 
         # sequence length must be 27
         @test_throws AssertionError energy(1, [1, 2, 3])
+        # amino acid indices must be in 1:20
+        @test_throws AssertionError energy(1, fill(21, 27))
+        # structures must be an array of contact pairs
+        @test_throws AssertionError energy(1, seq; structures=zeros(Int, 28, 1, 3))
     end
 
     @testset "log_pnat" begin

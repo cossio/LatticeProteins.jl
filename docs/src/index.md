@@ -6,7 +6,9 @@ In this model, a protein is represented as a chain of 27 amino acids that folds 
 a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by
 pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix.
 The probability that a sequence folds into a given "native" structure is computed via a
-Boltzmann distribution over 10,000 pre-computed compact structures.
+Boltzmann distribution over the competing compact structures: by default the 10,000
+reference structures of Jacquin et al. (2016), or optionally all 103,346 compact structures
+of the lattice.
 
 This package does not export any symbols; everything is accessed either with the
 `LatticeProteins.` prefix or by importing the names explicitly, e.g.

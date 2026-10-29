@@ -8,7 +8,8 @@ const L = 27 # sequence length
 """
     load_contact_maps()
 
-Load the pre-computed contact maps for 10,000 compact structures on the 3×3×3 cubic lattice.
+Load the pre-computed contact maps of the 10,000 reference compact structures on the 3×3×3
+cubic lattice used by Jacquin et al. (2016).
 Returns an `Array{Int, 3}` of size `(28, 10000, 2)`, where `CONTACT_MAPS[:, s, :]` gives the
 28 pairs of contacting residue indices for structure `s`.
 """
@@ -20,16 +21,21 @@ end
 """
     CONTACT_MAPS
 
-Pre-loaded contact maps for all 10,000 compact structures. An `Array{Int, 3}` of size
-`(28, 10000, 2)`. Use `CONTACT_MAPS[:, s, :]` to get the contact pairs for structure `s`.
+Pre-loaded contact maps of the 10,000 reference compact structures. An `Array{Int, 3}` of
+size `(28, 10000, 2)`. Use `CONTACT_MAPS[:, s, :]` to get the contact pairs for structure `s`.
 See [`load_contact_maps`](@ref).
+
+These are the structures used by Jacquin et al. (2016), and the default set of competing
+structures in [`pnat`](@ref) and [`metropolis!`](@ref). They are a subset of the 103,346
+compact structures of the lattice, which can be generated with
+[`enumerate_structures`](@ref).
 """
 const CONTACT_MAPS = load_contact_maps()
 
 """
     N_STRUCTURES
 
-Total number of pre-computed compact structures (10,000).
+Number of reference compact structures in [`CONTACT_MAPS`](@ref) (10,000).
 """
 const N_STRUCTURES = size(CONTACT_MAPS, 2)
 

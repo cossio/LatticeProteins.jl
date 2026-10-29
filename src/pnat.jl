@@ -53,14 +53,16 @@ function energies!(E::Vector{Float64}, seq::AbstractVector{Int}, structures::Abs
     return E
 end
 
-# log(sum(exp.(-E))), computed stably and without allocating.
-function logsumexp_neg(E::Vector{Float64})
-    m = -minimum(E)
-    s = 0.0
+# -log(pnat), shared by probability evaluation and both samplers. Shift before
+# summing exponentials, and center the native energy before adding log(z) to
+# avoid cancellation when the native probability is close to one.
+function _folding_loss(E, cm)
+    emin = minimum(E)
+    z = 0.0
     for e in E
-        s += exp(-e - m)
+        z += exp(emin - e)
     end
-    return m + log(s)
+    return (E[cm] - emin) + log(z)
 end
 
 """
@@ -85,7 +87,7 @@ See also [`pnat`](@ref), [`energy`](@ref).
 """
 function log_pnat(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES)
     E = energies(seq; structures)
-    return -E[cm] - logsumexp_neg(E)
+    return -_folding_loss(E, cm)
 end
 
 """

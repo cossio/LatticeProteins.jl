@@ -1,5 +1,5 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: pnat, potts, energy, log_pnat, structure_index,
+using LatticeProteins: pnat, potts, energy, log_pnat, structure_index, _folding_loss,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D,
     MJ, STRUCTURES, SHAKHNOVICH_STRUCTURES, N_CONTACTS
 
@@ -11,6 +11,17 @@ const D10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_D)
 jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
 
 @testset "pnat" begin
+    @testset "stable folding loss" begin
+        # An independent high-precision sum checks both overflow protection and
+        # cancellation for near-native sequences with a large energy offset.
+        for E in ([-1e12, -1e12 + 10], [-1e12, -1e12], [1000.0, -1000.0, 0.0])
+            for cm in eachindex(E)
+                exact = Float64(log(sum(exp(BigFloat(E[cm]) - BigFloat(e)) for e in E)))
+                @test _folding_loss(E, cm) ≈ exact rtol=1e-13 atol=1e-15
+            end
+        end
+    end
+
     @testset "energy" begin
         # energy should return a Float64
         seq = potts("WRFQDPGRCEEEDERMCGPEMCRCRQK")

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+- Parallelize local replica updates with temperature-specific RNG streams, producing
+  identical results across thread counts and with `threaded=false`. Seeded trajectories
+  differ from v2.1.0. Share the stable folding-loss calculation across samplers and
+  probability evaluation, and add an exact-distribution sampling check.
+
 ## 2.1.0
 
 - Add full-model parallel tempering with reproducible RNGs, cached mutation

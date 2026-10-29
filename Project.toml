@@ -1,7 +1,7 @@
 name = "LatticeProteins"
 uuid = "2b3394db-9f9c-454f-a26a-0ad872321417"
 authors = "Jorge FdCD <jorge.fdcd@icloud.com>"
-version = "1.1.0"
+version = "2.0.0"
 
 [workspace]
 projects = ["test"]

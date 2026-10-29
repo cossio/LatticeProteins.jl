@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata from this file."
 type: software
 title: "LatticeProteins.jl"
-version: 1.1.0
+version: 2.0.0
 license: MIT
 repository-code: "https://github.com/cossio/LatticeProteins.jl"
 authors:

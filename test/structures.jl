@@ -1,10 +1,8 @@
 using Test: @test, @testset
 using LatticeProteins: enumerate_structures, structure_index, energy, energies, pnat, log_pnat,
-    metropolis!, random_msa, potts, CONTACT_MAPS, N_STRUCTURES, N_CONTACTS, L,
+    metropolis!, random_msa, potts, STRUCTURES, JACQUIN_STRUCTURES, N_STRUCTURES, N_CONTACTS, L,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D
 using Random: seed!
-
-const ALL = enumerate_structures()
 
 contact_key(cm) = sort([minmax(cm[k, 1], cm[k, 2]) for k in axes(cm, 1)])
 # chain reversal maps contact (i, j) to (L + 1 - j, L + 1 - i)
@@ -12,89 +10,92 @@ reverse_structure(cm) = [L + 1 - cm[k, 3 - c] for k in axes(cm, 1), c in 1:2]
 
 @testset "enumerate_structures" begin
     # Shakhnovich & Gutin (1990): 103,346 compact conformations unrelated by symmetry
-    @test size(ALL) == (N_CONTACTS, 103_346, 2)
-    @test eltype(ALL) == Int
-    @test all(1 .≤ ALL .≤ L)
+    @test size(STRUCTURES) == (N_CONTACTS, 103_346, 2)
+    @test eltype(STRUCTURES) == Int
+    @test all(1 .≤ STRUCTURES .≤ L)
 
-    I = ALL[:, :, 1]
-    J = ALL[:, :, 2]
+    I = STRUCTURES[:, :, 1]
+    J = STRUCTURES[:, :, 2]
     @test all(I .< J)
     # the lattice is bipartite, so contacting residues have opposite parity, and
     # residues adjacent along the chain are bonded, not in contact
     @test all(isodd.(J .- I))
     @test all(J .- I .≥ 3)
     # contacts are sorted within each structure
-    @test all(issorted(collect(zip(I[:, s], J[:, s]))) for s in axes(ALL, 2))
+    @test all(issorted(collect(zip(I[:, s], J[:, s]))) for s in 1:N_STRUCTURES)
 
-    keys = Set(contact_key(ALL[:, s, :]) for s in axes(ALL, 2))
-    @test length(keys) == size(ALL, 2) # no duplicates
+    keys = Set(contact_key(STRUCTURES[:, s, :]) for s in 1:N_STRUCTURES)
+    @test length(keys) == N_STRUCTURES # no duplicates
     # the set is closed under chain reversal; a few structures are their own reversal
-    @test all(contact_key(reverse_structure(ALL[:, s, :])) in keys for s in axes(ALL, 2))
-    @test count(contact_key(reverse_structure(ALL[:, s, :])) == contact_key(ALL[:, s, :]) for s in axes(ALL, 2)) == 62
+    @test all(contact_key(reverse_structure(STRUCTURES[:, s, :])) in keys for s in 1:N_STRUCTURES)
+    @test count(contact_key(reverse_structure(STRUCTURES[:, s, :])) == contact_key(STRUCTURES[:, s, :]) for s in 1:N_STRUCTURES) == 62
     # the 10,000 reference structures are among them
-    @test all(contact_key(CONTACT_MAPS[:, s, :]) in keys for s in 1:N_STRUCTURES)
-    # deterministic order
-    @test enumerate_structures() == ALL
+    @test all(contact_key(JACQUIN_STRUCTURES[:, s, :]) in keys for s in 1:10_000)
+    # deterministic: STRUCTURES is the output of enumerate_structures
+    @test enumerate_structures() == STRUCTURES
 end
 
 @testset "structure_index" begin
-    for cm in (CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D)
-        s = structure_index(ALL, CONTACT_MAPS[:, cm, :])
-        @test s isa Int
-        @test contact_key(ALL[:, s, :]) == contact_key(CONTACT_MAPS[:, cm, :])
-        @test structure_index(ALL, cm) == s
-        @test structure_index(CONTACT_MAPS, ALL[:, s, :]) == cm
+    for (cm, s10) in zip((CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D), (625, 848, 6683, 6685))
+        @test structure_index(JACQUIN_STRUCTURES, STRUCTURES[:, cm, :]) == s10
+        @test structure_index(JACQUIN_STRUCTURES, cm) == s10
+        @test structure_index(STRUCTURES, JACQUIN_STRUCTURES[:, s10, :]) == cm
+        @test structure_index(STRUCTURES, cm) == cm
+        @test contact_key(STRUCTURES[:, cm, :]) == contact_key(JACQUIN_STRUCTURES[:, s10, :])
     end
-    @test structure_index(CONTACT_MAPS, 7) == 7
+    @test structure_index(JACQUIN_STRUCTURES, JACQUIN_STRUCTURES[:, 7, :]) == 7
     # most compact structures are not in the reference set
-    @test any(structure_index(CONTACT_MAPS, ALL[:, s, :]) === nothing for s in 1:100)
+    @test any(structure_index(JACQUIN_STRUCTURES, STRUCTURES[:, s, :]) === nothing for s in 1:100)
     # the order of the contacts and the order within each pair are ignored
-    cm = CONTACT_MAPS[:, CONTACT_MAP_A, :]
-    @test structure_index(CONTACT_MAPS, reverse(cm; dims=1)) == CONTACT_MAP_A
-    @test structure_index(CONTACT_MAPS, cm[:, [2, 1]]) == CONTACT_MAP_A
+    cm = STRUCTURES[:, CONTACT_MAP_A, :]
+    @test structure_index(STRUCTURES, reverse(cm; dims=1)) == CONTACT_MAP_A
+    @test structure_index(STRUCTURES, cm[:, [2, 1]]) == CONTACT_MAP_A
+    # a contact map with a different number of contacts is never found
+    @test structure_index(STRUCTURES, cm[1:27, :]) === nothing
     # the chain reversal of structure A is a different structure, absent from the reference set
-    @test structure_index(CONTACT_MAPS, reverse_structure(cm)) === nothing
-    @test structure_index(ALL, reverse_structure(cm)) != structure_index(ALL, cm)
+    @test structure_index(JACQUIN_STRUCTURES, reverse_structure(cm)) === nothing
+    @test structure_index(STRUCTURES, reverse_structure(cm)) != CONTACT_MAP_A
 end
 
-@testset "pnat over all structures" begin
+@testset "pnat against the reference set" begin
     seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
-    a = structure_index(ALL, CONTACT_MAP_A)
+    a10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
 
-    @test energy(a, seq; structures=ALL) == energy(CONTACT_MAP_A, seq)
-    E = energies(seq; structures=ALL)
+    @test energy(a10, seq; structures=JACQUIN_STRUCTURES) == energy(CONTACT_MAP_A, seq)
+    E = energies(seq)
     @test E isa Vector{Float64}
-    @test length(E) == size(ALL, 2)
-    @test E[a] == energy(CONTACT_MAP_A, seq)
-    @test E == [energy(s, seq; structures=ALL) for s in axes(ALL, 2)]
-    @test energies(seq) == [energy(s, seq) for s in 1:N_STRUCTURES]
+    @test length(E) == N_STRUCTURES
+    @test E[CONTACT_MAP_A] == energy(CONTACT_MAP_A, seq)
+    @test E == [energy(s, seq) for s in 1:N_STRUCTURES]
+    E10 = energies(seq; structures=JACQUIN_STRUCTURES)
+    @test E10 == [energy(s, seq; structures=JACQUIN_STRUCTURES) for s in 1:10_000]
 
-    # the reference set is a subset, so pnat can only decrease with the full set
-    @test pnat(a, seq; structures=ALL) < pnat(CONTACT_MAP_A, seq)
-    @test log_pnat(a, seq; structures=ALL) ≈ log(pnat(a, seq; structures=ALL))
+    # the reference set is a subset of the full set, so pnat can only be lower with the full set
+    @test pnat(CONTACT_MAP_A, seq) < pnat(a10, seq; structures=JACQUIN_STRUCTURES)
+    @test log_pnat(CONTACT_MAP_A, seq) ≈ log(pnat(CONTACT_MAP_A, seq))
 
-    # normalization: pnat over the full set is a probability distribution over structures
+    # normalization: pnat is a probability distribution over structures
     m = maximum(-E)
     p = exp.(-E .- (m + log(sum(exp.(-E .- m)))))
     @test sum(p) ≈ 1
-    @test pnat(a, seq; structures=ALL) ≈ p[a]
+    @test pnat(CONTACT_MAP_A, seq) ≈ p[CONTACT_MAP_A]
 
-    # the default is the reference set
-    @test pnat(CONTACT_MAP_A, seq; structures=CONTACT_MAPS) == pnat(CONTACT_MAP_A, seq)
-    @test log_pnat(CONTACT_MAP_A, seq; structures=CONTACT_MAPS) == log_pnat(CONTACT_MAP_A, seq)
+    # the default is the full set
+    @test pnat(CONTACT_MAP_A, seq; structures=STRUCTURES) == pnat(CONTACT_MAP_A, seq)
+    @test log_pnat(CONTACT_MAP_A, seq; structures=STRUCTURES) == log_pnat(CONTACT_MAP_A, seq)
 end
 
-@testset "metropolis over all structures" begin
+@testset "metropolis against the reference set" begin
     seed!(1)
-    a = structure_index(ALL, CONTACT_MAP_A)
+    a10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
     seq = rand(1:20, L)
-    pnat_before = pnat(a, seq; structures=ALL)
-    metropolis!(seq, a; β=100, nsteps=500, structures=ALL)
-    pnat_after = pnat(a, seq; structures=ALL)
+    pnat_before = pnat(a10, seq; structures=JACQUIN_STRUCTURES)
+    metropolis!(seq, a10; β=100, nsteps=500, structures=JACQUIN_STRUCTURES)
+    pnat_after = pnat(a10, seq; structures=JACQUIN_STRUCTURES)
     @test all(1 .≤ seq .≤ 20)
     @test pnat_after > pnat_before
 
-    msa = random_msa(a; nseqs=2, β=100, nsteps=50, structures=ALL)
+    msa = random_msa(a10; nseqs=2, β=100, nsteps=50, structures=JACQUIN_STRUCTURES)
     @test size(msa) == (L, 2)
     @test all(1 .≤ msa .≤ 20)
 end

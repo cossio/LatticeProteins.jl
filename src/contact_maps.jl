@@ -8,10 +8,10 @@ const L = 27 # sequence length
 """
     load_contact_maps()
 
-Load the pre-computed contact maps of the 10,000 reference compact structures on the 3×3×3
-cubic lattice used by Jacquin et al. (2016).
-Returns an `Array{Int, 3}` of size `(28, 10000, 2)`, where `CONTACT_MAPS[:, s, :]` gives the
-28 pairs of contacting residue indices for structure `s`.
+Load the pre-computed contact maps of the 10,000 reference compact structures used by
+Jacquin et al. (2016). Returns an `Array{Int, 3}` of size `(28, 10000, 2)`, where
+`cm[:, s, :]` gives the 28 pairs of contacting residue indices of structure `s`.
+See [`JACQUIN_STRUCTURES`](@ref).
 """
 function load_contact_maps()
     cm = readdlm(joinpath(artifact"ContactMaps", "contact_maps_10000.dat"), Int)[:, 2:end]
@@ -19,50 +19,18 @@ function load_contact_maps()
 end
 
 """
-    CONTACT_MAPS
+    JACQUIN_STRUCTURES
 
-Pre-loaded contact maps of the 10,000 reference compact structures. An `Array{Int, 3}` of
-size `(28, 10000, 2)`. Use `CONTACT_MAPS[:, s, :]` to get the contact pairs for structure `s`.
+Contact maps of the 10,000 reference compact structures used by Jacquin et al. (2016), a
+subset of [`STRUCTURES`](@ref). An `Array{Int, 3}` of size `(28, 10000, 2)`; use
+`JACQUIN_STRUCTURES[:, s, :]` to get the contact pairs of structure `s`.
 See [`load_contact_maps`](@ref).
 
-These are the structures used by Jacquin et al. (2016), and the default set of competing
-structures in [`pnat`](@ref) and [`metropolis!`](@ref). They are a subset of the 103,346
-compact structures of the lattice, which can be generated with
-[`enumerate_structures`](@ref).
+Pass `structures = JACQUIN_STRUCTURES` to [`pnat`](@ref), [`metropolis!`](@ref) and related
+functions to compete only against this set, as in Jacquin et al. (2016) and in the
+[`Hugo_MSA_pnat`](@ref) values. Structure indices refer to the set in use; use
+[`structure_index`](@ref) to translate between the two sets. For example,
+`structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)` gives the index (625) of reference
+structure A in this set.
 """
-const CONTACT_MAPS = load_contact_maps()
-
-"""
-    N_STRUCTURES
-
-Number of reference compact structures in [`CONTACT_MAPS`](@ref) (10,000).
-"""
-const N_STRUCTURES = size(CONTACT_MAPS, 2)
-
-"""
-    CONTACT_MAP_A
-
-Index of reference structure A (625) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_A = 625
-
-"""
-    CONTACT_MAP_B
-
-Index of reference structure B (848) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_B = 848
-
-"""
-    CONTACT_MAP_C
-
-Index of reference structure C (6683) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_C = 6683
-
-"""
-    CONTACT_MAP_D
-
-Index of reference structure D (6685) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_D = 6685
+const JACQUIN_STRUCTURES = load_contact_maps()

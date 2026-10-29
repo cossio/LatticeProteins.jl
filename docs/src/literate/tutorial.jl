@@ -16,20 +16,25 @@
 
 using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts, AMINO_ACIDS,
     metropolis!, random_msa, CONTACT_MAP_A, CONTACT_MAP_B,
-    CONTACT_MAPS, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat,
-    enumerate_structures, structure_index
+    STRUCTURES, JACQUIN_STRUCTURES, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat,
+    structure_index
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
-# The package ships with the 10,000 reference compact structures (contact maps) used by
-# Jacquin et al. (2016):
+# There are 103,346 maximally compact structures (counted up to rotations and reflections
+# of the cube), which the package enumerates when it is loaded. Their contact maps are
+# stored in `STRUCTURES`, an array of size `(28, N_STRUCTURES, 2)`:
 
 N_STRUCTURES
 
 # Four of these structures are highlighted in Jacquin et al. (2016) and exposed as
 # constants `CONTACT_MAP_A`, `CONTACT_MAP_B`, `CONTACT_MAP_C` and `CONTACT_MAP_D`.
-# Each is simply an index into the structure database:
+# Each is simply an index into `STRUCTURES`:
 
 CONTACT_MAP_A
+
+# The 28 contacts of structure A, as pairs of residue positions:
+
+STRUCTURES[:, CONTACT_MAP_A, :]
 
 # ## Encoding sequences
 #
@@ -65,8 +70,8 @@ energy(CONTACT_MAP_A, seq)
 energy(CONTACT_MAP_B, seq)
 
 # The probability that a sequence folds into a particular "native" structure is given
-# by a Boltzmann distribution over the competing structures, by default the 10,000
-# reference ones. This is [`pnat`](@ref) (and its logarithm [`log_pnat`](@ref)):
+# by a Boltzmann distribution over all competing compact structures. This is
+# [`pnat`](@ref) (and its logarithm [`log_pnat`](@ref)):
 
 pnat(CONTACT_MAP_A, seq)
 
@@ -81,7 +86,7 @@ log_pnat(CONTACT_MAP_A, seq)
 # at inverse temperature `β`; a large `β` strongly favours sequences with high
 # folding probability for the target structure.
 
-msa = random_msa(CONTACT_MAP_A; nseqs = 20, β = 100, nsteps = 200)
+msa = random_msa(CONTACT_MAP_A; nseqs = 20, β = 100, nsteps = 1000)
 size(msa)
 
 # Each column of the returned matrix is an integer-coded sequence. The sampled
@@ -97,46 +102,39 @@ s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 metropolis!(s, CONTACT_MAP_A; β = 100, nsteps = 200)
 pnat(CONTACT_MAP_A, s)
 
-# ## Summing over all compact structures
+# ## The reference structures of Jacquin et al. (2016)
 #
-# The 10,000 structures in `CONTACT_MAPS` are the reference set used by Jacquin et al.
-# (2016), but they are only a subset of the 103,346 maximally compact structures of a
-# 27-mer on the 3×3×3 lattice (counted up to rotations and reflections of the cube, but not
-# up to chain reversal, which in general gives a different contact map).
-# [`enumerate_structures`](@ref) generates all of them in about a second, in the same
-# layout as `CONTACT_MAPS`:
+# Jacquin et al. (2016) restricted the competing structures to a representative subset of
+# 10,000, which the package ships as `JACQUIN_STRUCTURES` (same layout as `STRUCTURES`):
 
-ALL = enumerate_structures()
-size(ALL)
-
-# Structure indices differ between the two sets. [`structure_index`](@ref) finds a
-# reference structure in the full set:
-
-a = structure_index(ALL, CONTACT_MAP_A)
+size(JACQUIN_STRUCTURES)
 
 # All functions accept the set of competing structures through the `structures` keyword
-# argument. The full set contains more competitors, so the folding probability of a
-# sequence can only decrease:
+# argument. Structure indices refer to the set in use, and [`structure_index`](@ref)
+# translates between sets. Structure A is number 625 of the reference set:
 
-pnat(CONTACT_MAP_A, seq)
+a = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
+
+# The reference set has fewer competitors, so folding probabilities computed against it
+# are higher than against all compact structures:
+
+pnat(a, seq; structures = JACQUIN_STRUCTURES)
 
 #-
 
-pnat(a, seq; structures = ALL)
+pnat(CONTACT_MAP_A, seq)
 
-# Sampling works the same way. The sampler keeps the energies of all structures and
-# updates them incrementally after each mutation, so a step costs about a millisecond
-# even with the full set:
+# Sampling works the same way:
 
-s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
-metropolis!(s, a; β = 100, nsteps = 200, structures = ALL)
-pnat(a, s; structures = ALL)
+msa_ref = random_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = JACQUIN_STRUCTURES)
+mean(pnat(a, col; structures = JACQUIN_STRUCTURES) for col in eachcol(msa_ref))
 
 # ## Reference datasets
 #
 # The package also bundles the reference multiple sequence alignments (MSAs) and
 # their folding probabilities from Jacquin et al. (2016), accessible with
-# [`Hugo_MSA`](@ref) and [`Hugo_MSA_pnat`](@ref):
+# [`Hugo_MSA`](@ref) and [`Hugo_MSA_pnat`](@ref). The folding probabilities were computed
+# against the reference structures:
 
 sequences = Hugo_MSA(:A)
 length(sequences)
@@ -145,5 +143,9 @@ length(sequences)
 
 pnat_values = Hugo_MSA_pnat(:A)
 first(pnat_values, 5)
+
+#-
+
+pnat(a, potts(sequences[1]); structures = JACQUIN_STRUCTURES)
 
 # See the [Reference](@ref) for the complete list of available functions.

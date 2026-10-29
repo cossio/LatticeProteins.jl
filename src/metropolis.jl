@@ -38,8 +38,16 @@ function SiteContacts(structures::AbstractArray{Int,3})
     return SiteContacts(offsets, structure, partner)
 end
 
+# Per-site contact index of the default structure set, built on first use.
+const default_site_contacts = Base.OncePerProcess{SiteContacts}() do
+    SiteContacts(STRUCTURES)
+end
+
+# Per-site contact index of `structures`; cached for the default set.
+site_contacts(structures::AbstractArray{Int,3}) = structures === STRUCTURES ? default_site_contacts() : SiteContacts(structures)
+
 """
-    metropolis!(seq::AbstractVector{Int}, cm::Int; β=1, nsteps=1, structures=CONTACT_MAPS)
+    metropolis!(seq::AbstractVector{Int}, cm::Int; β=1, nsteps=1, structures=STRUCTURES)
 
 Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`, targeting
 structure `cm`. The sequence is mutated in place.
@@ -49,22 +57,25 @@ The move is accepted or rejected using the Metropolis criterion with inverse tem
 where the energy is `-log_pnat(cm, seq; structures)`.
 
 The energies of `seq` in all structures are kept and updated incrementally after each
-mutation, so a step costs much less than a call to [`log_pnat`](@ref).
+mutation, so a step costs much less than a call to [`log_pnat`](@ref). This requires a
+per-site index of the contacts of `structures`, which is cached for the default set and
+rebuilt on every call for any other set; for repeated short runs on another set, prefer
+[`random_msa`](@ref) or a single call with a large `nsteps`.
 
 # Arguments
 - `seq`: integer-coded amino acid sequence of length 27 (values in `1:20`).
 - `cm`: target structure index (in `structures`).
 - `β`: inverse temperature (higher values favor sequences that fold into `cm`).
 - `nsteps`: number of Monte Carlo steps to perform.
-- `structures`: set of competing structures, by default the 10,000 reference structures
-  [`CONTACT_MAPS`](@ref). Pass the output of [`enumerate_structures`](@ref) to compete
-  against all compact structures.
+- `structures`: set of competing structures, by default all compact structures
+  [`STRUCTURES`](@ref). Pass [`JACQUIN_STRUCTURES`](@ref) to compete only against the
+  10,000 reference structures of Jacquin et al. (2016) (`cm` then indexes that set).
 
 Returns the mutated `seq`.
 """
-function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real=1, nsteps::Int=1, structures::AbstractArray{Int,3}=CONTACT_MAPS)
+function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real=1, nsteps::Int=1, structures::AbstractArray{Int,3}=STRUCTURES)
     check_sequence(seq)
-    return metropolis!(seq, cm, structures, SiteContacts(structures); β, nsteps)
+    return metropolis!(seq, cm, structures, site_contacts(structures); β, nsteps)
 end
 
 # Given the energies `E` of `seq` in all structures, writes into `E1` the energies of the
@@ -106,7 +117,7 @@ function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArra
 end
 
 """
-    random_msa(cm::Int; nseqs=1, β=1, nsteps=1000, structures=CONTACT_MAPS)
+    random_msa(cm::Int; nseqs=1, β=1, nsteps=1000, structures=STRUCTURES)
 
 Generate a random multiple sequence alignment (MSA) of `nseqs` sequences that fold into
 structure `cm`, using Metropolis Monte Carlo sampling.
@@ -118,8 +129,8 @@ structures (see [`metropolis!`](@ref)).
 
 See also [`metropolis!`](@ref).
 """
-function random_msa(cm::Int; nseqs::Int = 1, β::Real=1, nsteps::Int=1000, structures::AbstractArray{Int,3}=CONTACT_MAPS)
-    sites = SiteContacts(structures)
+function random_msa(cm::Int; nseqs::Int = 1, β::Real=1, nsteps::Int=1000, structures::AbstractArray{Int,3}=STRUCTURES)
+    sites = site_contacts(structures)
     seqs = rand(1:20, L, nseqs)
     for n = 1:nseqs
         metropolis!(view(seqs, :, n), cm, structures, sites; β, nsteps)

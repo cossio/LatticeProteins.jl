@@ -1,10 +1,14 @@
 using Test: @test, @testset
 using LatticeProteins: Hugo_MSA, Hugo_MSA_pnat, pnat, potts, energy, log_pnat, onehot,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D,
-    MJ, CONTACT_MAPS, L, N_STRUCTURES, N_CONTACTS, AMINO_ACIDS,
+    MJ, STRUCTURES, JACQUIN_STRUCTURES, structure_index, L, N_STRUCTURES, N_CONTACTS, AMINO_ACIDS,
     random_msa, metropolis!
 using Statistics: mean
 using Random: seed!
+
+# The Hugo MSAs and their pnat values were computed against the 10,000 reference
+# structures of Jacquin et al. (2016).
+jacquin_pnat(cm, seq) = pnat(structure_index(JACQUIN_STRUCTURES, cm), seq; structures=JACQUIN_STRUCTURES)
 
 # Tests based on properties from:
 #   Jacquin, Hugo, et al. "Benchmarking inverse statistical approaches for protein
@@ -61,7 +65,7 @@ using Random: seed!
 
             # Check first 10 sequences for each structure
             for i in 1:10
-                @test pnat(cm, potts(msa[i])) ≈ pnats[i]
+                @test jacquin_pnat(cm, potts(msa[i])) ≈ pnats[i]
             end
         end
     end
@@ -117,7 +121,7 @@ using Random: seed!
         for cm in [CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D]
             E = energy(cm, seq)
             E_manual = sum(
-                MJ[seq[CONTACT_MAPS[k, cm, 1]], seq[CONTACT_MAPS[k, cm, 2]]]
+                MJ[seq[STRUCTURES[k, cm, 1]], seq[STRUCTURES[k, cm, 2]]]
                 for k in 1:N_CONTACTS
             )
             @test E ≈ E_manual
@@ -127,7 +131,7 @@ using Random: seed!
     @testset "contact map structure" begin
         # Each structure has 28 contacts between distinct residues in 1:27.
         for cm in [CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D]
-            contacts = CONTACT_MAPS[:, cm, :]
+            contacts = STRUCTURES[:, cm, :]
             @test size(contacts) == (N_CONTACTS, 2)
 
             for k in 1:N_CONTACTS

@@ -15,7 +15,7 @@ LatticeProteins
 ## Structures and contact maps
 
 ```@docs
-CONTACT_MAPS
+STRUCTURES
 N_STRUCTURES
 N_CONTACTS
 L
@@ -23,6 +23,7 @@ CONTACT_MAP_A
 CONTACT_MAP_B
 CONTACT_MAP_C
 CONTACT_MAP_D
+JACQUIN_STRUCTURES
 load_contact_maps
 enumerate_structures
 structure_index

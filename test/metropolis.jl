@@ -1,6 +1,6 @@
 using Test: @test, @testset
-using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat, energies,
-    SiteContacts, mutate_energies!, CONTACT_MAP_A, CONTACT_MAPS, L
+using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat, energies, structure_index,
+    SiteContacts, mutate_energies!, CONTACT_MAP_A, STRUCTURES, JACQUIN_STRUCTURES, L
 using Random: seed!, randexp
 
 # Reference implementation that recomputes log_pnat from scratch at every step, with the
@@ -54,7 +54,7 @@ end
 
     @testset "incremental energies match recomputation" begin
         seed!(6)
-        sites = SiteContacts(CONTACT_MAPS)
+        sites = SiteContacts(STRUCTURES)
         seq = rand(1:20, L)
         E = energies(seq)
         E1 = similar(E)
@@ -67,23 +67,31 @@ end
             E, E1 = E1, E
         end
 
+        # same trajectories as recomputing log_pnat at every step, on both structure sets
+        a10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
         seed!(7)
         seq0 = rand(1:20, L)
         for β in (1, 10, 100)
             seed!(8)
-            seq1 = metropolis!(copy(seq0), CONTACT_MAP_A; β, nsteps=300)
+            seq1 = metropolis!(copy(seq0), a10; β, nsteps=300, structures=JACQUIN_STRUCTURES)
             seed!(8)
-            seq2 = naive_metropolis!(copy(seq0), CONTACT_MAP_A; β, nsteps=300, structures=CONTACT_MAPS)
+            seq2 = naive_metropolis!(copy(seq0), a10; β, nsteps=300, structures=JACQUIN_STRUCTURES)
             @test seq1 == seq2
             @test seq1 != seq0
         end
+        seed!(8)
+        seq1 = metropolis!(copy(seq0), CONTACT_MAP_A; β=10, nsteps=100)
+        seed!(8)
+        seq2 = naive_metropolis!(copy(seq0), CONTACT_MAP_A; β=10, nsteps=100, structures=STRUCTURES)
+        @test seq1 == seq2
+        @test seq1 != seq0
 
         seed!(5)
         msa = random_msa(CONTACT_MAP_A; nseqs=3, β=10, nsteps=50)
         seed!(5)
         seqs = rand(1:20, L, 3)
         for n in 1:3
-            naive_metropolis!(view(seqs, :, n), CONTACT_MAP_A; β=10, nsteps=50, structures=CONTACT_MAPS)
+            naive_metropolis!(view(seqs, :, n), CONTACT_MAP_A; β=10, nsteps=50, structures=STRUCTURES)
         end
         @test msa == seqs
     end

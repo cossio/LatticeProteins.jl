@@ -52,6 +52,7 @@ aaseq
 ```@docs
 metropolis!
 random_msa
+parallel_tempering
 ```
 
 ## Miyazawa-Jernigan matrix

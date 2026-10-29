@@ -101,9 +101,10 @@ pnat(CONTACT_MAP_A, s)
 #
 # The 10,000 structures in `CONTACT_MAPS` are the reference set used by Jacquin et al.
 # (2016), but they are only a subset of the 103,346 maximally compact structures of a
-# 27-mer on the 3×3×3 lattice (counted up to rotations and reflections of the cube; a
-# structure and its chain reversal are distinct). [`enumerate_structures`](@ref) generates
-# all of them in a few seconds, in the same layout as `CONTACT_MAPS`:
+# 27-mer on the 3×3×3 lattice (counted up to rotations and reflections of the cube, but not
+# up to chain reversal, which in general gives a different contact map).
+# [`enumerate_structures`](@ref) generates all of them in about a second, in the same
+# layout as `CONTACT_MAPS`:
 
 ALL = enumerate_structures()
 size(ALL)

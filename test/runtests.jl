@@ -5,6 +5,7 @@ module onehot_tests include("onehot.jl") end
 module pnat_tests include("pnat.jl") end
 module Hugo_MSAs_tests include("Hugo_MSAs.jl") end
 module metropolis_tests include("metropolis.jl") end
+module parallel_tempering_tests include("parallel_tempering.jl") end
 module jacquin2016_tests include("jacquin2016.jl") end
 module structures_tests include("structures.jl") end
 module tubiana2019_tests include("tubiana2019.jl") end

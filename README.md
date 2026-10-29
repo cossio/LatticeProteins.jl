@@ -87,6 +87,44 @@ All of these take a `structures` keyword argument selecting the set of competing
 |----------|-------------|
 | `metropolis!(seq, cm; β, nsteps, structures)` | In-place Metropolis sampling of a sequence |
 | `random_msa(cm; nseqs, β, nsteps, structures)` | Generate a random MSA via Metropolis sampling |
+| `parallel_tempering(cm; betas, nseqs, burnin, thin, local_steps, structures)` | Replica-exchange sampling with swap and round-trip diagnostics |
+
+For strong selection, run replicas over a fixed ladder from weak to strong selection:
+
+```julia
+using LatticeProteins: parallel_tempering, CONTACT_MAP_A
+using Random: Xoshiro
+
+# Starting ladder for a pilot; inspect diagnostics before a production run.
+betas = [0.0; exp.(range(log(0.1), log(3000.0); length=31))]
+betas[end] = 3000.0
+result = parallel_tempering(CONTACT_MAP_A; betas, burnin=5000,
+    nseqs=500, thin=10, local_steps=10, rng=Xoshiro(42))
+msa = result.samples                         # only the beta=3000 samples
+swap_rates = result.diagnostics.swap_accepts ./ result.diagnostics.swap_attempts
+result.diagnostics.round_trips               # hot → cold → hot, per replica ID
+```
+
+Burn-in and thinning are measured in exchange rounds, each containing
+`local_steps` mutation proposals per replica. The example uses 50,000 burn-in
+proposals per replica. The target distribution is proportional to `pnat^beta`;
+the default folding model includes all 103,346 compact structures. To use the
+paper's 10,000-structure subset, pass `structures=SHAKHNOVICH_STRUCTURES` and translate
+the target with `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)`. Inspect temperature
+traversal and compare independent runs: a high `pnat` alone does not demonstrate
+equilibration, and saved samples are not necessarily independent.
+
+For a reproducible comparison against independent Metropolis chains with the same
+total mutation budget, run:
+
+```bash
+julia --project=. --threads=4 examples/parallel_tempering.jl /tmp/pt-results
+```
+
+The script saves sequences, temperature traces, exchange rates, and run parameters;
+see its header for shorter pilot settings. The output directory must not already
+exist. It defaults to the full model; an optional final `shakhnovich` argument
+selects the 10,000-structure subset and records that choice in the results.
 
 ### Reference data
 

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+- Add full-model parallel tempering with reproducible RNGs, cached mutation
+  energies, temperature traces, and separate burn-in/production exchange and
+  round-trip diagnostics. Include an equal-budget Metropolis comparison script.
+
 ## 1.0.0 - 2023-08-03
 
 - No changes.

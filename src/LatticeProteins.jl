@@ -22,7 +22,7 @@ module LatticeProteins
 
 using LazyArtifacts: LazyArtifacts, @artifact_str
 using DelimitedFiles: readdlm
-using Random: randexp
+using Random: AbstractRNG, default_rng, randexp
 
 """
     N_CONTACTS
@@ -37,6 +37,7 @@ include("structures.jl")
 include("pnat.jl")
 include("onehot.jl")
 include("metropolis.jl")
+include("parallel_tempering.jl")
 include("artifacts.jl")
 
 end # module

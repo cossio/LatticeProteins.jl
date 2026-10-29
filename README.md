@@ -87,7 +87,7 @@ All of these take a `structures` keyword argument selecting the set of competing
 |----------|-------------|
 | `metropolis!(seq, cm; β, nsteps, structures)` | In-place Metropolis sampling of a sequence |
 | `random_msa(cm; nseqs, β, nsteps, structures)` | Generate a random MSA via Metropolis sampling |
-| `parallel_tempering(cm; betas, nseqs, burnin, thin, local_steps, structures)` | Replica-exchange sampling with swap and round-trip diagnostics |
+| `parallel_tempering(cm; betas, nseqs, burnin, thin, local_steps, structures, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 
@@ -113,6 +113,12 @@ paper's 10,000-structure subset, pass `structures=SHAKHNOVICH_STRUCTURES` and tr
 the target with `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)`. Inspect temperature
 traversal and compare independent runs: a high `pnat` alone does not demonstrate
 equilibration, and saved samples are not necessarily independent.
+
+Start Julia with `--threads=4` (or another thread count) to run local replica updates
+in parallel. Temperature-specific RNG streams make results identical to
+`threaded=false` for the same seed and Julia version. Use `threaded=false` when
+parallelizing multiple independent ladders externally. Seeded trajectories differ
+from the single-stream implementation in version 2.1.0.
 
 For a reproducible comparison against independent Metropolis chains with the same
 total mutation budget, run:

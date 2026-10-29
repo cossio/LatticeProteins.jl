@@ -22,7 +22,7 @@ module LatticeProteins
 
 using LazyArtifacts: LazyArtifacts, @artifact_str
 using DelimitedFiles: readdlm
-using Random: AbstractRNG, default_rng, randexp
+using Random: AbstractRNG, Xoshiro, default_rng, randexp
 
 """
     N_CONTACTS

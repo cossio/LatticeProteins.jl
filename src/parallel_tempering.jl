@@ -7,17 +7,6 @@ mutable struct _TemperingReplica
     id::Int
 end
 
-# Stable, allocation-free -log(pnat), with exactly the same structural ensemble
-# as log_pnat. The maximum shifted exponent is zero, even for poor sequences.
-function _folding_loss(energies, cm)
-    emin = minimum(energies)
-    z = 0.0
-    @inbounds for e in energies
-        z += exp(emin - e)
-    end
-    return (energies[cm] - emin) + log(z)
-end
-
 function _TemperingReplica(seq, cm, id, structures=STRUCTURES)
     E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures)
     return _TemperingReplica(copy(seq), E, similar(E), _folding_loss(E, cm), id)
@@ -40,6 +29,32 @@ function _tempering_local!(rng, replica, cm, beta, nsteps, sites)
         end
     end
     return accepted
+end
+
+# Each slot exclusively owns its RNG, replica, and counters during this phase.
+# The threaded loop joins before any serial swaps or endpoint bookkeeping.
+function _tempering_sweep!(rngs, replicas, cm, betas, nsteps, sites, structures,
+                           counts, refresh, threaded)
+    function update_slot!(i)
+        replica = replicas[i]
+        counts.local_attempts[i] += nsteps
+        counts.local_accepts[i] += _tempering_local!(rngs[i], replica, cm, betas[i], nsteps, sites)
+        if refresh
+            energies!(replica.energies, replica.seq, structures)
+            replica.loss = _folding_loss(replica.energies, cm)
+        end
+    end
+    if threaded && Threads.nthreads() > 1
+        # Unlike :static, :dynamic also works inside another threaded caller.
+        Threads.@threads :dynamic for i in eachindex(replicas)
+            update_slot!(i)
+        end
+    else
+        for i in eachindex(replicas)
+            update_slot!(i)
+        end
+    end
+    return nothing
 end
 
 # log[pi(swapped) / pi(current)] for pi_beta(s) ∝ exp(-beta * loss(s)).
@@ -74,7 +89,7 @@ end
 """
     parallel_tempering(cm::Int; betas, nseqs=100, burnin=1000, thin=10,
                        local_steps=10, initial_seqs=nothing, rng=default_rng(),
-                       structures=STRUCTURES)
+                       structures=STRUCTURES, threaded=true)
 
 Sample sequences with replica exchange, targeting `pnat(cm, seq; structures)^betas[end]`.
 `betas` must contain at least two finite, nonnegative, strictly increasing inverse
@@ -94,7 +109,15 @@ until `nseqs` samples have been saved. Thus each replica receives
 `(burnin + nseqs * thin) * local_steps` mutation proposals. `initial_seqs`, when
 provided, is a `(27, length(betas))` integer matrix, ordered hot to cold; it is
 copied. Otherwise each replica starts from an independent uniform sequence.
-Use an explicit RNG for reproducible runs.
+Use an explicit RNG for reproducible runs. Each temperature slot uses its own
+`Xoshiro` stream seeded from `rng`; swaps use `rng` serially. For fixed arguments
+and a fixed Julia version, results do not depend on thread count or scheduling.
+These streams differ from the sampler's original single RNG stream in v2.1.0.
+
+With `threaded=true`, local updates and cache refreshes run on Julia's default
+thread pool (start Julia with e.g. `--threads=4`). Set `threaded=false` to run
+serially, for example when parallelizing independent ladders in the caller.
+Both modes use the same streams and produce identical results.
 
 Returns a named tuple with:
 - `samples`: coldest-replica MSA, size `(27, nseqs)`. Samples can be correlated.
@@ -116,7 +139,8 @@ See also [`metropolis!`](@ref), [`random_msa`](@ref).
 function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=100,
     burnin::Int=1000, thin::Int=10, local_steps::Int=10,
     initial_seqs::Union{Nothing,AbstractMatrix{Int}}=nothing,
-    rng::AbstractRNG=default_rng(), structures::AbstractArray{Int,3}=STRUCTURES)
+    rng::AbstractRNG=default_rng(), structures::AbstractArray{Int,3}=STRUCTURES,
+    threaded::Bool=true)
 
     check_structures(structures)
     1 <= cm <= size(structures, 2) || throw(ArgumentError("invalid target structure"))
@@ -135,29 +159,23 @@ function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=1
         size(initial_seqs) == (L, n) || throw(ArgumentError("initial_seqs must have size (27, length(betas))"))
         all(a -> 1 <= a <= 20, initial_seqs) || throw(ArgumentError("residues must be in 1:20"))
     end
-    replicas = [_TemperingReplica(initial_seqs[:, i], cm, i, structures) for i in 1:n]
+    replicas = [_TemperingReplica(view(initial_seqs, :, i), cm, i, structures) for i in 1:n]
+    rngs = [Xoshiro(rand(rng, UInt64)) for _ in 1:n]
     sites = site_contacts(structures)
     samples = Matrix{Int}(undef, L, nseqs)
     trace = Matrix{Float64}(undef, n, nseqs)
     ids = Matrix{Int}(undef, n, nseqs)
     burnin_diagnostics, diagnostics = _tempering_counts(n), _tempering_counts(n)
-    round = 0
+    round_index = 0
     for (rounds, counts, production) in ((burnin, burnin_diagnostics, false),
                                         (nseqs * thin, diagnostics, true))
         stages = zeros(Int, n)
         _record_endpoints!(stages, counts.round_trips, replicas)
         for step in 1:rounds
-            round += 1
-            for i in 1:n
-                counts.local_attempts[i] += local_steps
-                counts.local_accepts[i] += _tempering_local!(rng, replicas[i], cm,
-                    betas[i], local_steps, sites)
-                if round % 100 == 0
-                    energies!(replicas[i].energies, replicas[i].seq, structures)
-                    replicas[i].loss = _folding_loss(replicas[i].energies, cm)
-                end
-            end
-            first_edge = n == 2 || isodd(round) ? 1 : 2
+            round_index += 1
+            _tempering_sweep!(rngs, replicas, cm, betas, local_steps, sites, structures,
+                              counts, round_index % 100 == 0, threaded)
+            first_edge = n == 2 || isodd(round_index) ? 1 : 2
             for i in first_edge:2:n-1
                 counts.swap_attempts[i] += 1
                 counts.swap_accepts[i] += _tempering_swap!(rng, replicas, betas, i)
@@ -174,6 +192,6 @@ function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=1
         end
     end
     return (; samples, betas, log_pnat=trace, replica_ids=ids,
-        final_seqs=hcat((r.seq for r in replicas)...),
+        final_seqs=stack(r.seq for r in replicas),
         final_log_pnat=[-r.loss for r in replicas], burnin_diagnostics, diagnostics)
 end

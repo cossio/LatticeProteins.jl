@@ -97,7 +97,7 @@ end
 function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArray{Int,3}, sites::SiteContacts; β::Real, nsteps::Int)
     E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures) # energies of seq in all structures
     E1 = similar(E) # energies of the proposed sequence
-    F = E[cm] + logsumexp_neg(E) # -log_pnat
+    F = _folding_loss(E, cm)
     for _ = 1:nsteps
         i = rand(1:length(seq)) # randomly select a position in the sequence
         new_aa = rand(1:20)
@@ -106,7 +106,7 @@ function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArra
             continue
         end
         mutate_energies!(E1, E, seq, i, new_aa, sites)
-        F1 = E1[cm] + logsumexp_neg(E1)
+        F1 = _folding_loss(E1, cm)
         if β * (F1 - F) < randexp()
             seq[i] = new_aa # accept move
             F = F1

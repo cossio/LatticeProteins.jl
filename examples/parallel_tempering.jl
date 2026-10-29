@@ -28,17 +28,17 @@ end
 function controls(initial, seed, burnin, nseqs, thin, local_steps, cm, structures)
     rng = Xoshiro(seed)
     sites = LP.site_contacts(structures)
-    replicas = [LP._TemperingReplica(initial[:, i], cm, i, structures) for i in axes(initial, 2)]
+    replicas = [LP._TemperingReplica(view(initial, :, i), cm, i, structures) for i in axes(initial, 2)]
     ps = Matrix{Float64}(undef, length(replicas), nseqs)
     for (i, replica) in enumerate(replicas)
-        for round in 1:(burnin + nseqs * thin)
+        for round_index in 1:(burnin + nseqs * thin)
             LP._tempering_local!(rng, replica, cm, 3000.0, local_steps, sites)
-            if round % 100 == 0
+            if round_index % 100 == 0
                 LP.energies!(replica.energies, replica.seq, structures)
                 replica.loss = LP._folding_loss(replica.energies, cm)
             end
-            if round > burnin && (round - burnin) % thin == 0
-                ps[i, (round - burnin) ÷ thin] = exp(-replica.loss)
+            if round_index > burnin && (round_index - burnin) % thin == 0
+                ps[i, (round_index - burnin) ÷ thin] = exp(-replica.loss)
             end
         end
         println("control seed=$seed chain=$i final_pnat=$(exp(-replica.loss))")
@@ -70,8 +70,10 @@ function main(args)
         run = (job + 1) ÷ 2
         seed = 2000 + run
         if isodd(job)
+            # Independent jobs already run in parallel; keep each ladder serial.
             elapsed = @elapsed r = parallel_tempering(cm; betas, burnin,
-                nseqs, thin, local_steps, structures, initial_seqs=initial[run], rng=Xoshiro(seed))
+                nseqs, thin, local_steps, structures, initial_seqs=initial[run],
+                rng=Xoshiro(seed), threaded=false)
             rows = [(sample * thin, exp(r.log_pnat[end, sample]), r.replica_ids[end, sample],
                      aaseq(r.samples[:, sample])) for sample in 1:nseqs]
             save_csv(joinpath(out, "pt_$(run)_cold.csv"),

@@ -130,6 +130,16 @@ The contact covariance matrix (panel f) keeps the same structure in both version
 (``r = 0.94``): the physics that the paper reads from it, contacts stabilized by cysteine
 pairs and by opposite charges, is the same under both models.
 
+Raising the selection strength does not simply restore the paper's stringency. With
+``\beta = 3000`` and a burn-in of 50,000 steps (`sample_msa.jl all 20 100 out.txt 3000 50000`),
+each chain reaches a stationary ``P_\text{nat}`` within its basin, but the basins differ:
+14 of the 20 chains settle at ``P_\text{nat}`` between 0.992 and 0.996, while the other 6
+stay trapped between 0.93 and 0.98 for the whole run, and no chain ever leaves its basin.
+Overall 16% of the sequences exceed 0.995 (70% exceed 0.99). Under the full model the
+sequence landscape at these selection strengths is glassy, and sampling the equilibrium
+ensemble at the paper's stringency would require a better sampler (for example many more
+chains, or parallel tempering) rather than longer runs.
+
 ## Regenerating the figures
 
 The scripts that produced the figures are in `docs/figures/tubiana2019/` and are not run by

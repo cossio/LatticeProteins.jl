@@ -1,3 +1,4 @@
+module compat_hygiene_tests include("compat_hygiene.jl") end
 module util_tests include("util.jl") end
 module miyazawa_jernigan_tests include("miyazawa_jernigan.jl") end
 module contact_maps_tests include("contact_maps.jl") end

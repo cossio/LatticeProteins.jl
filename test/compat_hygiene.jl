@@ -1,0 +1,4 @@
+import LatticeProteins
+import TestCompatHygiene
+
+TestCompatHygiene.test_all(LatticeProteins)

@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ## Unreleased
 
+## 2.1.1
+
 - Parallelize local replica updates with temperature-specific RNG streams, producing
   identical results across thread counts and with `threaded=false`. Seeded trajectories
   differ from v2.1.0. Share the stable folding-loss calculation across samplers and

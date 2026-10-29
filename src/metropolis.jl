@@ -68,8 +68,8 @@ rebuilt on every call for any other set; for repeated short runs on another set,
 - `β`: inverse temperature (higher values favor sequences that fold into `cm`).
 - `nsteps`: number of Monte Carlo steps to perform.
 - `structures`: set of competing structures, by default all compact structures
-  [`STRUCTURES`](@ref). Pass [`JACQUIN_STRUCTURES`](@ref) to compete only against the
-  10,000 reference structures of Jacquin et al. (2016) (`cm` then indexes that set).
+  [`STRUCTURES`](@ref). Pass [`SHAKHNOVICH_STRUCTURES`](@ref) to compete only against the
+  subset of 10,000 structures used by Jacquin et al. (2016) (`cm` then indexes that set).
 
 Returns the mutated `seq`.
 """

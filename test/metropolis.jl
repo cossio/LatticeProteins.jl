@@ -1,6 +1,6 @@
 using Test: @test, @testset
 using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat, energies, structure_index,
-    SiteContacts, mutate_energies!, CONTACT_MAP_A, STRUCTURES, JACQUIN_STRUCTURES, L
+    SiteContacts, mutate_energies!, CONTACT_MAP_A, STRUCTURES, SHAKHNOVICH_STRUCTURES, L
 using Random: seed!, randexp
 
 # Reference implementation that recomputes log_pnat from scratch at every step, with the
@@ -68,14 +68,14 @@ end
         end
 
         # same trajectories as recomputing log_pnat at every step, on both structure sets
-        a10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
+        a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
         seed!(7)
         seq0 = rand(1:20, L)
         for β in (1, 10, 100)
             seed!(8)
-            seq1 = metropolis!(copy(seq0), a10; β, nsteps=300, structures=JACQUIN_STRUCTURES)
+            seq1 = metropolis!(copy(seq0), a10; β, nsteps=300, structures=SHAKHNOVICH_STRUCTURES)
             seed!(8)
-            seq2 = naive_metropolis!(copy(seq0), a10; β, nsteps=300, structures=JACQUIN_STRUCTURES)
+            seq2 = naive_metropolis!(copy(seq0), a10; β, nsteps=300, structures=SHAKHNOVICH_STRUCTURES)
             @test seq1 == seq2
             @test seq1 != seq0
         end

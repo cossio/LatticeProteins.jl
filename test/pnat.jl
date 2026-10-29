@@ -1,14 +1,14 @@
 using Test: @test, @testset, @test_throws
 using LatticeProteins: pnat, potts, energy, log_pnat, structure_index,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D,
-    MJ, STRUCTURES, JACQUIN_STRUCTURES, N_CONTACTS
+    MJ, STRUCTURES, SHAKHNOVICH_STRUCTURES, N_CONTACTS
 
 # indices of the reference structures in the reference set of Jacquin et al. (2016)
-const A10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
-const B10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_B)
-const C10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_C)
-const D10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_D)
-jacquin_pnat(cm, seq) = pnat(cm, seq; structures=JACQUIN_STRUCTURES)
+const A10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
+const B10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_B)
+const C10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_C)
+const D10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_D)
+jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
 
 @testset "pnat" begin
     @testset "energy" begin
@@ -30,7 +30,7 @@ jacquin_pnat(cm, seq) = pnat(cm, seq; structures=JACQUIN_STRUCTURES)
         @test energy(CONTACT_MAP_A, seq) == energy(CONTACT_MAP_A, seq)
 
         # the energy does not depend on the set the structure is taken from
-        @test energy(D10, seq; structures=JACQUIN_STRUCTURES) == E_D
+        @test energy(D10, seq; structures=SHAKHNOVICH_STRUCTURES) == E_D
 
         # sequence length must be 27
         @test_throws AssertionError energy(1, [1, 2, 3])
@@ -49,7 +49,7 @@ jacquin_pnat(cm, seq) = pnat(cm, seq; structures=JACQUIN_STRUCTURES)
 
         # log_pnat for a sequence designed against the reference set should be close to 0
         # on that set
-        lp_good = log_pnat(D10, seq; structures=JACQUIN_STRUCTURES)
+        lp_good = log_pnat(D10, seq; structures=SHAKHNOVICH_STRUCTURES)
         @test lp_good > -1  # high pnat means log_pnat close to 0
 
         # sequence length must be 27

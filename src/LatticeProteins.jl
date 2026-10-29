@@ -8,8 +8,9 @@ folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure 
 determined by pairwise contacts using the Miyazawa-Jernigan interaction matrix. The
 probability that a sequence folds into a structure is a Boltzmann distribution over the
 competing compact structures: by default all 103,346 compact structures of the lattice
-([`STRUCTURES`](@ref)), or optionally the 10,000 reference structures of Jacquin et al.
-(2016) ([`JACQUIN_STRUCTURES`](@ref)).
+([`STRUCTURES`](@ref)), or optionally the representative subset of 10,000 structures of
+Heo, Maslov & Shakhnovich (2011) used by Jacquin et al. (2016)
+([`SHAKHNOVICH_STRUCTURES`](@ref)).
 
 # References
 

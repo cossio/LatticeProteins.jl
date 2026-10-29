@@ -16,7 +16,7 @@
 
 using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts, AMINO_ACIDS,
     metropolis!, random_msa, CONTACT_MAP_A, CONTACT_MAP_B,
-    STRUCTURES, JACQUIN_STRUCTURES, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat,
+    STRUCTURES, SHAKHNOVICH_STRUCTURES, N_STRUCTURES, MJ, Hugo_MSA, Hugo_MSA_pnat,
     structure_index
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
@@ -102,23 +102,24 @@ s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 metropolis!(s, CONTACT_MAP_A; β = 100, nsteps = 200)
 pnat(CONTACT_MAP_A, s)
 
-# ## The reference structures of Jacquin et al. (2016)
+# ## The subset of 10,000 structures of Jacquin et al. (2016)
 #
 # Jacquin et al. (2016) restricted the competing structures to a representative subset of
-# 10,000, which the package ships as `JACQUIN_STRUCTURES` (same layout as `STRUCTURES`):
+# 10,000 selected by the Shakhnovich group (Heo, Maslov & Shakhnovich 2011), which the
+# package ships as `SHAKHNOVICH_STRUCTURES` (same layout as `STRUCTURES`):
 
-size(JACQUIN_STRUCTURES)
+size(SHAKHNOVICH_STRUCTURES)
 
 # All functions accept the set of competing structures through the `structures` keyword
 # argument. Structure indices refer to the set in use, and [`structure_index`](@ref)
 # translates between sets. Structure A is number 625 of the reference set:
 
-a = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
+a = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
 
 # The reference set has fewer competitors, so folding probabilities computed against it
 # are higher than against all compact structures:
 
-pnat(a, seq; structures = JACQUIN_STRUCTURES)
+pnat(a, seq; structures = SHAKHNOVICH_STRUCTURES)
 
 #-
 
@@ -126,15 +127,15 @@ pnat(CONTACT_MAP_A, seq)
 
 # Sampling works the same way:
 
-msa_ref = random_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = JACQUIN_STRUCTURES)
-mean(pnat(a, col; structures = JACQUIN_STRUCTURES) for col in eachcol(msa_ref))
+msa_ref = random_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = SHAKHNOVICH_STRUCTURES)
+mean(pnat(a, col; structures = SHAKHNOVICH_STRUCTURES) for col in eachcol(msa_ref))
 
 # ## Reference datasets
 #
 # The package also bundles the reference multiple sequence alignments (MSAs) and
 # their folding probabilities from Jacquin et al. (2016), accessible with
 # [`Hugo_MSA`](@ref) and [`Hugo_MSA_pnat`](@ref). The folding probabilities were computed
-# against the reference structures:
+# against the subset of 10,000 structures:
 
 sequences = Hugo_MSA(:A)
 length(sequences)
@@ -146,6 +147,6 @@ first(pnat_values, 5)
 
 #-
 
-pnat(a, potts(sequences[1]); structures = JACQUIN_STRUCTURES)
+pnat(a, potts(sequences[1]); structures = SHAKHNOVICH_STRUCTURES)
 
 # See the [Reference](@ref) for the complete list of available functions.

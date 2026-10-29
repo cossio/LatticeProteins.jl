@@ -1,12 +1,12 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: pnat, potts, onehot, L, structure_index, JACQUIN_STRUCTURES,
+using LatticeProteins: pnat, potts, onehot, L, structure_index, SHAKHNOVICH_STRUCTURES,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D,
     Hugo_MSA, Hugo_MSA_pnat, Hugo_MSA_path
 using Statistics: mean
 
 # The pnat values in the Hugo MSA files were computed against the 10,000 reference
 # structures of Jacquin et al. (2016).
-jacquin_pnat(cm, seq) = pnat(structure_index(JACQUIN_STRUCTURES, cm), seq; structures=JACQUIN_STRUCTURES)
+jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures=SHAKHNOVICH_STRUCTURES)
 
 @testset "Hugo_MSAs" begin
     @testset "Hugo_MSA_path" begin
@@ -40,18 +40,18 @@ jacquin_pnat(cm, seq) = pnat(structure_index(JACQUIN_STRUCTURES, cm), seq; struc
     @testset "Hugo_MSA pnat consistency - A" begin
         msa_A = Hugo_MSA(:A)
         pnat_A = Hugo_MSA_pnat(:A)
-        a10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_A)
+        a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
         for i = 1:100
-            @test pnat(a10, potts(msa_A[i]); structures=JACQUIN_STRUCTURES) ≈ pnat_A[i]
+            @test pnat(a10, potts(msa_A[i]); structures=SHAKHNOVICH_STRUCTURES) ≈ pnat_A[i]
         end
     end
 
     @testset "Hugo_MSA pnat consistency - B" begin
         msa_B = Hugo_MSA(:B)
         pnat_B = Hugo_MSA_pnat(:B)
-        b10 = structure_index(JACQUIN_STRUCTURES, CONTACT_MAP_B)
+        b10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_B)
         for i = 1:100
-            @test pnat(b10, potts(msa_B[i]); structures=JACQUIN_STRUCTURES) ≈ pnat_B[i]
+            @test pnat(b10, potts(msa_B[i]); structures=SHAKHNOVICH_STRUCTURES) ≈ pnat_B[i]
         end
     end
 

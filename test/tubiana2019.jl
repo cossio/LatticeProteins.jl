@@ -1,6 +1,6 @@
 using Test: @test, @testset
 using LatticeProteins: LatticeProteins, Hugo_MSA, Hugo_MSA_pnat, potts, onehot, log_pnat,
-    metropolis!, structure_index, JACQUIN_STRUCTURES, CONTACT_MAP_A, AMINO_ACIDS, L, N_CONTACTS
+    metropolis!, structure_index, SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A, AMINO_ACIDS, L, N_CONTACTS
 using LinearAlgebra: eigen, Symmetric, dot, norm
 using Statistics: mean, cor
 using Random: seed!
@@ -16,7 +16,7 @@ using Random: seed!
 # covariance between amino acids on contacting sites (panels d, e and f of the figure) with
 # the reference alignment of Jacquin et al. bundled with the package.
 
-const S = JACQUIN_STRUCTURES
+const S = SHAKHNOVICH_STRUCTURES
 const A10 = structure_index(S, CONTACT_MAP_A)
 
 # Site frequencies (20 × 27), conservation profile, first principal component (20 × 27) and

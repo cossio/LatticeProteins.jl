@@ -7,7 +7,7 @@ The energy is the sum of Miyazawa-Jernigan interaction energies over all contact
 residue pairs in the given structure. `seq` must be a vector of length 27 with
 integer amino acid indices in `1:20`. `cm` is the index of the structure in `structures`,
 which defaults to all compact structures [`STRUCTURES`](@ref) and can be set to the
-reference structures [`JACQUIN_STRUCTURES`](@ref).
+subset [`SHAKHNOVICH_STRUCTURES`](@ref).
 """
 function energy(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES)
     check_sequence(seq)
@@ -77,9 +77,9 @@ the structures in `structures`:
 ```
 
 By default `structures` is [`STRUCTURES`](@ref), all 103,346 compact structures of the
-lattice. Pass `structures = JACQUIN_STRUCTURES` to sum only over the 10,000 reference
-structures of Jacquin et al. (2016) (see [`JACQUIN_STRUCTURES`](@ref)); note that structure
-indices refer to the set in use.
+lattice. Pass `structures = SHAKHNOVICH_STRUCTURES` to sum only over the representative
+subset of 10,000 structures used by Jacquin et al. (2016) (see
+[`SHAKHNOVICH_STRUCTURES`](@ref)); note that structure indices refer to the set in use.
 
 See also [`pnat`](@ref), [`energy`](@ref).
 """

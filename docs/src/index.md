@@ -7,7 +7,8 @@ a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determ
 pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix.
 The probability that a sequence folds into a given "native" structure is computed via a
 Boltzmann distribution over all 103,346 compact structures of the lattice (or, optionally,
-over the subset of 10,000 reference structures used by Jacquin et al. (2016)).
+over the representative subset of 10,000 structures selected by the Shakhnovich group and
+used by Jacquin et al. (2016)).
 
 This package does not export any symbols; everything is accessed either with the
 `LatticeProteins.` prefix or by importing the names explicitly, e.g.
@@ -45,7 +46,7 @@ full list of functions.
 ## Contents
 
 ```@contents
-Pages = ["literate/tutorial.md", "reference.md"]
+Pages = ["literate/tutorial.md", "tubiana2019.md", "reference.md"]
 Depth = 2
 ```
 

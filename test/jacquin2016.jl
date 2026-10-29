@@ -1,14 +1,14 @@
 using Test: @test, @testset
 using LatticeProteins: Hugo_MSA, Hugo_MSA_pnat, pnat, potts, energy, log_pnat, onehot,
     CONTACT_MAP_A, CONTACT_MAP_B, CONTACT_MAP_C, CONTACT_MAP_D,
-    MJ, STRUCTURES, JACQUIN_STRUCTURES, structure_index, L, N_STRUCTURES, N_CONTACTS, AMINO_ACIDS,
+    MJ, STRUCTURES, SHAKHNOVICH_STRUCTURES, structure_index, L, N_STRUCTURES, N_CONTACTS, AMINO_ACIDS,
     random_msa, metropolis!
 using Statistics: mean
 using Random: seed!
 
 # The Hugo MSAs and their pnat values were computed against the 10,000 reference
 # structures of Jacquin et al. (2016).
-jacquin_pnat(cm, seq) = pnat(structure_index(JACQUIN_STRUCTURES, cm), seq; structures=JACQUIN_STRUCTURES)
+jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures=SHAKHNOVICH_STRUCTURES)
 
 # Tests based on properties from:
 #   Jacquin, Hugo, et al. "Benchmarking inverse statistical approaches for protein

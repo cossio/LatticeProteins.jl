@@ -1,7 +1,25 @@
 using Test: @test, @testset
-using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat,
-    CONTACT_MAP_A, L
-using Random: seed!
+using LatticeProteins: random_msa, metropolis!, pnat, potts, log_pnat, energies, structure_index,
+    SiteContacts, mutate_energies!, CONTACT_MAP_A, STRUCTURES, SHAKHNOVICH_STRUCTURES, L
+using Random: seed!, randexp
+
+# Reference implementation that recomputes log_pnat from scratch at every step, with the
+# same sequence of random draws as metropolis!.
+function naive_metropolis!(seq, cm; β, nsteps, structures)
+    E = -log_pnat(cm, seq; structures)
+    for _ = 1:nsteps
+        i = rand(1:length(seq))
+        old_aa = seq[i]
+        seq[i] = rand(1:20)
+        E1 = -log_pnat(cm, seq; structures)
+        if β * (E1 - E) < randexp()
+            E = E1
+        else
+            seq[i] = old_aa
+        end
+    end
+    return seq
+end
 
 @testset "metropolis" begin
     @testset "metropolis!" begin
@@ -32,6 +50,50 @@ using Random: seed!
         @test 0 ≤ pnat_after ≤ 1
         @test length(seq3) == L
         @test all(1 .≤ seq3 .≤ 20)
+    end
+
+    @testset "incremental energies match recomputation" begin
+        seed!(6)
+        sites = SiteContacts(STRUCTURES)
+        seq = rand(1:20, L)
+        E = energies(seq)
+        E1 = similar(E)
+        for _ in 1:50
+            i = rand(1:L)
+            new_aa = rand(1:20)
+            mutate_energies!(E1, E, seq, i, new_aa, sites)
+            seq[i] = new_aa
+            @test E1 ≈ energies(seq) atol=1e-10
+            E, E1 = E1, E
+        end
+
+        # same trajectories as recomputing log_pnat at every step, on both structure sets
+        a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
+        seed!(7)
+        seq0 = rand(1:20, L)
+        for β in (1, 10, 100)
+            seed!(8)
+            seq1 = metropolis!(copy(seq0), a10; β, nsteps=300, structures=SHAKHNOVICH_STRUCTURES)
+            seed!(8)
+            seq2 = naive_metropolis!(copy(seq0), a10; β, nsteps=300, structures=SHAKHNOVICH_STRUCTURES)
+            @test seq1 == seq2
+            @test seq1 != seq0
+        end
+        seed!(8)
+        seq1 = metropolis!(copy(seq0), CONTACT_MAP_A; β=10, nsteps=100)
+        seed!(8)
+        seq2 = naive_metropolis!(copy(seq0), CONTACT_MAP_A; β=10, nsteps=100, structures=STRUCTURES)
+        @test seq1 == seq2
+        @test seq1 != seq0
+
+        seed!(5)
+        msa = random_msa(CONTACT_MAP_A; nseqs=3, β=10, nsteps=50)
+        seed!(5)
+        seqs = rand(1:20, L, 3)
+        for n in 1:3
+            naive_metropolis!(view(seqs, :, n), CONTACT_MAP_A; β=10, nsteps=50, structures=STRUCTURES)
+        end
+        @test msa == seqs
     end
 
     @testset "random_msa" begin

@@ -8,9 +8,10 @@ const L = 27 # sequence length
 """
     load_contact_maps()
 
-Load the pre-computed contact maps for 10,000 compact structures on the 3×3×3 cubic lattice.
-Returns an `Array{Int, 3}` of size `(28, 10000, 2)`, where `CONTACT_MAPS[:, s, :]` gives the
-28 pairs of contacting residue indices for structure `s`.
+Load the pre-computed contact maps of the representative subset of 10,000 compact
+structures of Heo, Maslov & Shakhnovich (2011). Returns an `Array{Int, 3}` of size
+`(28, 10000, 2)`, where `cm[:, s, :]` gives the 28 pairs of contacting residue indices of
+structure `s`. See [`SHAKHNOVICH_STRUCTURES`](@ref).
 """
 function load_contact_maps()
     cm = readdlm(joinpath(artifact"ContactMaps", "contact_maps_10000.dat"), Int)[:, 2:end]
@@ -18,45 +19,29 @@ function load_contact_maps()
 end
 
 """
-    CONTACT_MAPS
+    SHAKHNOVICH_STRUCTURES
 
-Pre-loaded contact maps for all 10,000 compact structures. An `Array{Int, 3}` of size
-`(28, 10000, 2)`. Use `CONTACT_MAPS[:, s, :]` to get the contact pairs for structure `s`.
+Contact maps of the representative subset of 10,000 compact structures selected by the
+Shakhnovich group (Heo, Maslov & Shakhnovich, 2011) out of the 103,346 of
+[`STRUCTURES`](@ref), and used as the set of competing structures by Jacquin et al. (2016)
+and Tubiana et al. (2019). An `Array{Int, 3}` of size `(28, 10000, 2)`; use
+`SHAKHNOVICH_STRUCTURES[:, s, :]` to get the contact pairs of structure `s`.
 See [`load_contact_maps`](@ref).
-"""
-const CONTACT_MAPS = load_contact_maps()
 
-"""
-    N_STRUCTURES
+Pass `structures = SHAKHNOVICH_STRUCTURES` to [`pnat`](@ref), [`metropolis!`](@ref) and
+related functions to compete only against this set, as in those papers and in the
+[`Hugo_MSA_pnat`](@ref) values. Structure indices refer to the set in use; use
+[`structure_index`](@ref) to translate between the two sets. For example,
+`structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)` gives the index (625) of reference
+structure A in this set.
 
-Total number of pre-computed compact structures (10,000).
-"""
-const N_STRUCTURES = size(CONTACT_MAPS, 2)
+# References
 
+- Heo, M., Maslov, S., and Shakhnovich, E. "Topology of protein interaction network shapes
+  protein abundances and strengths of their functional and nonspecific interactions."
+  *Proceedings of the National Academy of Sciences* 108.10 (2011): 4258-4263.
+- Jacquin, H., et al. "Benchmarking inverse statistical approaches for protein structure
+  and design with exactly solvable models." *PLoS Computational Biology* 12.5 (2016):
+  e1004889.
 """
-    CONTACT_MAP_A
-
-Index of reference structure A (625) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_A = 625
-
-"""
-    CONTACT_MAP_B
-
-Index of reference structure B (848) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_B = 848
-
-"""
-    CONTACT_MAP_C
-
-Index of reference structure C (6683) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_C = 6683
-
-"""
-    CONTACT_MAP_D
-
-Index of reference structure D (6685) from Jacquin et al. (2016).
-"""
-const CONTACT_MAP_D = 6685
+const SHAKHNOVICH_STRUCTURES = load_contact_maps()

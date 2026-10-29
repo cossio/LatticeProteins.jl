@@ -19,6 +19,7 @@ Documenter.makedocs(
     pages = [
         "Home" => "index.md",
         "Tutorial" => "literate/tutorial.md",
+        "Reproducing Tubiana et al. (2019)" => "tubiana2019.md",
         "Reference" => "reference.md",
     ],
     format = Documenter.HTML(;

@@ -37,7 +37,9 @@ end
 
 Load the native fold probabilities (pnat values) for the reference MSA dataset
 from Jacquin et al. (2016). `which` must be one of `:A`, `:B`, `:C`, or `:D`.
-Returns a `Vector{Float64}`.
+Returns a `Vector{Float64}`. These values were computed against the subset of 10,000
+structures, i.e. `pnat(cm, seq; structures = SHAKHNOVICH_STRUCTURES)` with `cm` the index of
+the structure in [`SHAKHNOVICH_STRUCTURES`](@ref).
 
 See also [`Hugo_MSA`](@ref).
 """

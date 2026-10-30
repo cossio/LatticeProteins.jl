@@ -41,6 +41,7 @@ function main(args)
         "samples_per_run" => nseqs, "burnin_rounds" => burnin, "thin_rounds" => thin,
         "local_steps" => local_steps, "seeds" => seeds, "julia_version" => string(VERSION),
         "energy_cache_requested" => string(energy_cache),
+        "rng_mode" => "shared", "threaded_replicas" => false,
         "reference_alignment" => Hugo_MSA_path(:A),
         "script_sha256" => bytes2hex(sha256(read(@__FILE__))),
         "sampler_sha256" => bytes2hex(sha256(read(joinpath(@__DIR__, "../../../src/parallel_tempering.jl")))),
@@ -56,7 +57,8 @@ function main(args)
     flush(stdout)
     Threads.@threads for run in 1:runs
         elapsed = @elapsed r = parallel_tempering(CONTACT_MAP_A; betas, burnin,
-            nseqs, thin, local_steps, energy_cache, structures=STRUCTURES, rng=Xoshiro(seeds[run]))
+            nseqs, thin, local_steps, energy_cache, structures=STRUCTURES, rng=Xoshiro(seeds[run]),
+            threaded=false, rng_mode=:shared)
         p = exp.(r.log_pnat[end, :])
         # Independent, direct energy sums verify the cached probabilities.
         checks = unique(round.(Int, range(1, nseqs; length=min(nseqs, 50))))

@@ -49,7 +49,7 @@ function advance!(state, parameters, out, run, batch_samples)
     elapsed = @elapsed result = parallel_tempering(CONTACT_MAP_A; betas,
         burnin=0, nseqs=batch_samples, thin=parameters["thin_rounds"],
         local_steps=parameters["local_steps"], rng=state[:rng], initial_seqs=state[:seqs],
-        structures=STRUCTURES, energy_cache=:integer)
+        structures=STRUCTURES, energy_cache=:integer, threaded=false, rng_mode=:shared)
     global_ids = state[:ids][result.replica_ids]
     # With an even ladder and thin=2, both endpoint edges are attempted on odd
     # rounds. The saved even-round snapshots therefore capture every endpoint
@@ -160,6 +160,8 @@ function main(args)
         parameters["continuation_sampler_sha256"]=sampler_hash
         parameters["continuation_script_sha256"]=bytes2hex(sha256(read(@__FILE__)))
         parameters["continuation_energy_cache"]="integer"
+        parameters["continuation_rng_mode"]="shared"
+        parameters["continuation_threaded_replicas"]=false
         parameters["continuation_seeds"]=[state[:seed] for state in states]
         parameters["round_trip_accounting"]="Sum of complete trips in original and continued production phases; checkpoint boundaries preserve continued-phase endpoint history."
         for (r,state) in enumerate(states);checkpoint(joinpath(out,"checkpoint_$(r).jls"),state);end

@@ -1,5 +1,6 @@
 using Test: @test, @testset, @test_throws
 using Random: Xoshiro
+using Statistics: mean, std
 using LatticeProteins: LatticeProteins, parallel_tempering, log_pnat, energy,
     CONTACT_MAP_A, L, N_STRUCTURES, potts, STRUCTURES, SHAKHNOVICH_STRUCTURES,
     structure_index
@@ -72,6 +73,58 @@ const LP = LatticeProteins
         good = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
         rgood = LP._TemperingReplica(good, CONTACT_MAP_A, 2)
         @test rgood.loss ≈ -log_pnat(CONTACT_MAP_A, good) atol=1e-13
+    end
+
+    @testset "serial, threaded, and nested calls agree" begin
+        initial = rand(Xoshiro(70), 1:20, L, 4)
+        # Include swaps, cache refresh, and production in this comparison.
+        options = (; betas=[0.0, 0.5, 5.0, 100.0], burnin=99, nseqs=4,
+                    thin=2, local_steps=2, initial_seqs=initial)
+        for energy_cache in (:float, :integer)
+            serial = parallel_tempering(CONTACT_MAP_A; options..., energy_cache,
+                rng=Xoshiro(71), threaded=false)
+            threaded = parallel_tempering(CONTACT_MAP_A; options..., energy_cache,
+                rng=Xoshiro(71), threaded=true)
+            @test serial.rng_mode == :per_temperature
+            @test serial == threaded
+            nested = Vector{typeof(serial)}(undef, 2)
+            Threads.@threads for job in eachindex(nested)
+                nested[job] = parallel_tempering(CONTACT_MAP_A; options..., energy_cache,
+                    rng=Xoshiro(71), threaded=true)
+            end
+            @test all(==(serial), nested)
+            @test threaded.final_log_pnat ≈ [log_pnat(CONTACT_MAP_A, s) for s in eachcol(threaded.final_seqs)] atol=1e-11
+        end
+    end
+
+    @testset "sampling an exactly enumerable ensemble" begin
+        # Two competing structures with one contact each, (1,4) and (1,6).
+        # Only three residues affect the probability, so enumerate all 20^3
+        # possibilities; the other 24 residues contribute a constant multiplicity.
+        structures = zeros(Int, 1, 2, 2)
+        structures[1, :, 1] .= 1
+        structures[1, :, 2] .= [4, 6]
+        states = collect(Iterators.product(1:20, 1:20, 1:20))
+        lp = vec([-log1p(exp(LP.MJ[a, b] - LP.MJ[a, c])) for (a, b, c) in states])
+        cysteine = vec([a == 1 for (a, b, c) in states])
+        betas = [0.0, 1.0, 5.0]
+        expected = [sum(lp .* exp.(beta .* lp)) / sum(exp.(beta .* lp)) for beta in betas]
+        weights = exp.(last(betas) .* lp)
+        expected_cysteine = sum(cysteine .* weights) / sum(weights)
+
+        r = parallel_tempering(1; structures, betas, rng=Xoshiro(72), threaded=false,
+            burnin=2000, nseqs=20_000, thin=2, local_steps=5)
+        # Batch means account for correlation. Each batch spans 5,000 local
+        # proposals per replica; use a conservative six-standard-error bound.
+        function test_mean(values, expected)
+            batches = vec(mean(reshape(values, 500, :); dims=1))
+            se = std(batches) / sqrt(length(batches))
+            @test mean(values) ≈ expected atol=6se
+        end
+        for i in eachindex(betas)
+            test_mean(r.log_pnat[i, :], expected[i])
+        end
+        test_mean(r.samples[1, :] .== 1, expected_cysteine)
     end
 
     @testset "selecting the structure ensemble" begin
@@ -159,7 +212,8 @@ const LP = LatticeProteins
         exact ./= normalization
         exact_pnat /= normalization
         r = parallel_tempering(1; structures, betas=[0.0, 0.5, 1.0, 2.0, beta],
-            burnin=2000, nseqs=40_000, thin=2, local_steps=5, rng=Xoshiro(20261030))
+            burnin=2000, nseqs=40_000, thin=2, local_steps=5, rng=Xoshiro(20261030),
+            threaded=false)
         observed = zeros(20, 3)
         for sample in eachcol(r.samples), (j, site) in enumerate((1, 4, 6))
             observed[sample[site], j] += 1 / size(r.samples, 2)
@@ -209,13 +263,16 @@ const LP = LatticeProteins
         # An even ladder with thin=2 also permits reconstructing every endpoint
         # change from saved IDs, as used by the long-running figure driver.
         whole = parallel_tempering(CONTACT_MAP_A; betas=[0.0,0.01,0.02,0.03],
-            burnin=0, nseqs=100, thin=2, local_steps=1, rng=Xoshiro(91))
+            burnin=0, nseqs=100, thin=2, local_steps=1, rng=Xoshiro(91),
+            threaded=false, rng_mode=:shared)
         rng = Xoshiro(91)
         first = parallel_tempering(CONTACT_MAP_A; betas=[0.0,0.01,0.02,0.03],
-            burnin=0, nseqs=50, thin=2, local_steps=1, rng)
+            burnin=0, nseqs=50, thin=2, local_steps=1, rng,
+            threaded=false, rng_mode=:shared)
         second = parallel_tempering(CONTACT_MAP_A; betas=[0.0,0.01,0.02,0.03],
             burnin=0, nseqs=50, thin=2, local_steps=1, rng,
-            initial_seqs=first.final_seqs)
+            initial_seqs=first.final_seqs, threaded=false, rng_mode=:shared)
+        @test whole.rng_mode == :shared
         @test whole.samples == hcat(first.samples, second.samples)
         @test whole.log_pnat == hcat(first.log_pnat, second.log_pnat)
         @test whole.final_seqs == second.final_seqs
@@ -233,6 +290,10 @@ const LP = LatticeProteins
     end
 
     @testset "invalid arguments" begin
+        @test_throws ArgumentError parallel_tempering(CONTACT_MAP_A; betas=[0.0, 1.0],
+            rng_mode=:invalid)
+        @test_throws ArgumentError parallel_tempering(CONTACT_MAP_A; betas=[0.0, 1.0],
+            rng_mode=:shared, threaded=true)
         for betas in (Float64[], [1.0], [1.0, 0.0], [0.0, 0.0], [-1.0, 2.0],
                       [0.0, Inf], [0.0, NaN])
             @test_throws ArgumentError parallel_tempering(CONTACT_MAP_A; betas)

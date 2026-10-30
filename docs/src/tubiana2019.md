@@ -110,6 +110,11 @@ mutation proposals per replica including burn-in. Each ladder has independent RN
 checkpoints preserve their streams throughout continuation. Saved sequences remain
 correlated, so their number is not an effective sample size.
 
+The figure scripts parallelize the four ladders externally and explicitly select
+`threaded=false, rng_mode=:shared` within each ladder. This preserves the original
+single-stream RNG protocol of the saved run. The package's default uses independent
+per-temperature streams; both protocols target the same distribution.
+
 **Folding probabilities above 0.99 are readily reached under the full model.** Of the
 316,000 recorded sequences, 172,717 (54.7%) have ``P_\text{nat}>0.99`` and are
 used below. The unfiltered mean is 0.990008; the retained mean is

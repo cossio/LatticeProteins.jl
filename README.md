@@ -87,7 +87,7 @@ All of these take a `structures` keyword argument selecting the set of competing
 |----------|-------------|
 | `metropolis!(seq, cm; β, nsteps, structures)` | In-place Metropolis sampling of a sequence |
 | `random_msa(cm; nseqs, β, nsteps, structures)` | Generate a random MSA via Metropolis sampling |
-| `parallel_tempering(cm; betas, nseqs, burnin, thin, local_steps, structures)` | Replica-exchange sampling with swap and round-trip diagnostics |
+| `parallel_tempering(cm; betas, nseqs, burnin, thin, local_steps, structures, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 
@@ -126,6 +126,14 @@ criteria pass, including sequence frequencies and principal components.
 The full-structure figure uses the resulting 316,000 saved PT draws, with 172,717
 retained at `P_nat > 0.99`; the alignment and convergence report are included in
 `docs/src/assets/` so the figure can be redrawn directly from these samples.
+
+Start Julia with `--threads=4` (or another thread count) to run local replica updates
+in parallel. Temperature-specific RNG streams make results identical to
+`threaded=false` for the same seed and Julia version. Use `threaded=false` when
+parallelizing multiple independent ladders externally. Seeded trajectories differ
+from the single-stream implementation in version 2.1.0.
+To reproduce that original protocol, as used by the saved Tubiana alignment, select
+`rng_mode=:shared` together with `threaded=false`. The figure drivers do this explicitly.
 
 For a reproducible comparison against independent Metropolis chains with the same
 total mutation budget, run:

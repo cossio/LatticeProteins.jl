@@ -77,6 +77,13 @@ The output retains cold draws, temperature traces, direct probability checks, an
 each convergence report. Original and continuation phases have separate code
 hashes and seeds in `parameters.toml`.
 
+Both figure drivers explicitly use `threaded=false, rng_mode=:shared` inside each
+ladder and parallelize the four ladders externally. This preserves the single-stream
+protocol used to generate the saved alignment, including across chunk boundaries.
+The package's default `rng_mode=:per_temperature` uses the newer independent
+temperature streams; disabling threads alone does not select the original protocol.
+The archived report retains the original run's code hashes.
+
 `diagnose_pt.py` checks rank-normalized split R-hat and bulk effective sample size
 using ArviZ. It monitors folding probability, threshold membership, five leading
 PCs, the reference PC1, and residue indicators with frequencies between 1% and 99%.

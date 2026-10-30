@@ -15,6 +15,15 @@ All notable changes to this project will be documented in this file. The format 
   Document how to redraw it from the saved alignment.
 - Validate parallel tempering against an exactly enumerable model and direct
   energies; preserve continuous trajectories across checkpoint boundaries.
+- Add an explicit serial `rng_mode=:shared` for reproducing the saved figure's
+  original RNG protocol; keep per-temperature RNGs and threaded updates as defaults.
+
+## 2.1.1
+
+- Parallelize local replica updates with temperature-specific RNG streams, producing
+  identical results across thread counts and with `threaded=false`. Seeded trajectories
+  differ from v2.1.0. Share the stable folding-loss calculation across samplers and
+  probability evaluation, and add an exact-distribution sampling check.
 
 ## 2.1.0
 

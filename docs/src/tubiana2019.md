@@ -143,6 +143,9 @@ Implementation correctness and equilibration are checked separately:
   interactions and tabulated Boltzmann factors. This accelerates the same transition
   kernel without rounding the interaction parameters or changing its target.
   The original floating-point kernel remains available as `energy_cache=:float`.
+  Integer caching is used for speed: the initial floating-point run's 200 direct
+  probability checks differed by at most ``7.44\times10^{-15}``, providing no
+  evidence of a significant roundoff problem with the existing cache refreshes.
 - Across the original and continued phases, 7,200 saved
   probabilities were independently recomputed over all 103,346 structures. The largest
   absolute discrepancy was ``2.54\times10^{-13}``.

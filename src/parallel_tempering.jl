@@ -7,9 +7,10 @@ mutable struct _TemperingReplica
     id::Int
 end
 
-# The bundled MJ entries are exact multiples of 0.01 when read as Float64.
-# Integer contact sums avoid cumulative roundoff and permit a lookup table for
-# exp(-delta_energy). This changes neither the model nor the proposal kernel.
+# The bundled MJ entries permit exact contact sums in units of 0.01. This enables
+# Boltzmann lookup instead of an exp evaluation for every structure and proposal.
+# The integer cache is a speed optimization; no significant roundoff problem was
+# observed in the floating cache with its existing 100-round refreshes.
 mutable struct _IntegerTemperingReplica
     seq::Vector{Int}
     energies::Vector{Int32} # units of 0.01

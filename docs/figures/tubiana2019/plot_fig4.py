@@ -1,13 +1,18 @@
 """Draw the panels of Fig. 4 of Tubiana, Cocco & Monasson (2019) from the statistics
 written by analyze_msa.jl.  Usage: python plot_fig4.py <stats dir> <output png> <title> [pnat threshold shown in labels]"""
-import sys, numpy as np, pandas as pd, matplotlib
+import sys, tomllib, numpy as np, pandas as pd, matplotlib
+from pathlib import Path
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, TwoSlopeNorm
 import logomaker
 
 statsdir, out, title = sys.argv[1], sys.argv[2], sys.argv[3]
-thr = sys.argv[4] if len(sys.argv) > 4 else "0.995"  # pnat threshold used by analyze_msa.jl, for the title
+metadata_path = Path(statsdir) / "analysis.toml"
+metadata = tomllib.loads(metadata_path.read_text()) if metadata_path.exists() else None
+thr = sys.argv[4] if len(sys.argv) > 4 else str(metadata["pnat_threshold"] if metadata else 0.995)
+if metadata and float(thr) != metadata["pnat_threshold"]:
+    raise ValueError("label threshold differs from the threshold used to analyze the MSA")
 AA = "CMFILVWYAGTSNQDEHRKP"
 classes = {"ED": ("negative", "#d62728"), "HKR": ("positive", "#1f77b4"), "NTSQ": ("polar", "#9467bd"),
            "FWY": ("aromatic", "#e6c700"), "ILMV": ("aliphatic", "black"), "C": ("cysteine", "#2ca02c"), "AGP": ("small", "#999999")}

@@ -114,6 +114,19 @@ the target with `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)`. Inspec
 traversal and compare independent runs: a high `pnat` alone does not demonstrate
 equilibration, and saved samples are not necessarily independent.
 
+The bundled MJ interactions allow exact integer contact-energy caching and a
+Boltzmann lookup table, used automatically by `parallel_tempering`. This speeds up
+full-structure sampling without changing the target distribution. Interactions
+that do not lie on the supported grid use the floating-point kernel; set
+`energy_cache=:float` to select it explicitly. The result reports the cache used.
+
+The [Tubiana figure scripts](docs/figures/tubiana2019/README.md) run four independent
+ladders, resume from checkpoints, and continue until the monitored convergence
+criteria pass, including sequence frequencies and principal components.
+The full-structure figure uses the resulting 316,000 saved PT draws, with 172,717
+retained at `P_nat > 0.99`; the alignment and convergence report are included in
+`docs/src/assets/` so the figure can be redrawn directly from these samples.
+
 For a reproducible comparison against independent Metropolis chains with the same
 total mutation budget, run:
 

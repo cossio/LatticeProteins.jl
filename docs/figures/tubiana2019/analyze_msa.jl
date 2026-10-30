@@ -5,6 +5,8 @@ using LatticeProteins: LatticeProteins, potts, onehot, AMINO_ACIDS, SHAKHNOVICH_
 using LinearAlgebra: eigen, Symmetric
 using Statistics: mean
 using DelimitedFiles: writedlm
+using Random: Xoshiro, randperm
+using TOML
 
 msafile, outdir = ARGS[1], ARGS[2]
 thr = length(ARGS) ≥ 3 ? parse(Float64, ARGS[3]) : 0.995
@@ -15,6 +17,7 @@ keep = pn .> thr
 println("$(length(seqs)) sequences, $(count(keep)) with pnat > $thr")
 seqs = seqs[keep]; pn = pn[keep]
 M = length(seqs)
+M >= 2 || error("need at least two sequences above the requested threshold $thr")
 X = Float64.(reshape(onehot(seqs)[1:20, :, :], 20 * L, M))   # 540 × M one-hot
 f = reshape(mean(X; dims=2), 20, L)                           # site frequencies f_i(a)
 cons = [log(20) + sum(p > 0 ? p * log(p) : 0.0 for p in f[:, i]) for i in 1:L]
@@ -25,7 +28,7 @@ ev = eigen(Cov)
 w = ev.vectors[:, end]
 W = reshape(w, 20, L)
 charged = [findfirst(==(c), AMINO_ACIDS) for c in "DEKRH"]
-sum(W[charged, :]) < 0 && (W .*= -1; w .*= -1)                # sign: charged residues positive
+sum(W[charged, :]) < 0 && (w .*= -1)                         # W is a view of w
 proj = Xc' * w
 println("top eigenvalues: ", round.(ev.values[end:-1:end-3]; sigdigits=3))
 # average covariance between pairs of sites in contact in structure A (20×20)
@@ -51,9 +54,15 @@ writedlm(joinpath(outdir, "proj.csv"), proj, ',')
 writedlm(joinpath(outdir, "contact_cov.csv"), C, ',')
 writedlm(joinpath(outdir, "pnat.csv"), pn, ',')
 open(joinpath(outdir, "sample_seqs.txt"), "w") do io
-    for s in seqs[1:min(60, M)]
-        println(io, s)
+    # Draw panel (c) across the whole alignment, not the beginning of one chain.
+    for i in randperm(Xoshiro(2019), M)[1:min(60, M)]
+        println(io, seqs[i])
     end
+end
+open(joinpath(outdir, "analysis.toml"), "w") do io
+    TOML.print(io, Dict("pnat_threshold"=>thr, "input_sequences"=>length(rows),
+        "retained_sequences"=>M, "mean_pnat"=>mean(pn),
+        "eigenvalues"=>ev.values[end:-1:end-4], "panel_c_seed"=>2019))
 end
 # 3D walks of structures A and G (6863 in the reference set) for drawing
 function find_walk(cm)

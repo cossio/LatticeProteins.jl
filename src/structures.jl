@@ -1,85 +1,183 @@
-# Coordinates of lattice site `s` (sites are numbered 1:27) and the inverse map.
-lattice_coords(s::Int) = ((s - 1) % 3, (s - 1) ÷ 3 % 3, (s - 1) ÷ 9)
-lattice_site(x::Int, y::Int, z::Int) = 1 + x + 3y + 9z
-
-# Lattice neighbours of each site.
-function lattice_neighbors()
-    nbrs = [Int[] for _ in 1:L]
-    for s in 1:L, d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
-        x, y, z = lattice_coords(s) .+ d
-        if 0 ≤ x ≤ 2 && 0 ≤ y ≤ 2 && 0 ≤ z ≤ 2
-            push!(nbrs[s], lattice_site(x, y, z))
-        end
-    end
-    return nbrs
+# Contacts of a set of structures grouped by residue position: for each position `i`, the
+# structures having a contact at `i` and the partner residue in that contact (stored in
+# CSR layout: the entries of position `i` are `offsets[i]:(offsets[i+1]-1)`). This lets the
+# samplers update the energies of all structures after a single-site mutation by visiting
+# only the contacts that involve the mutated position.
+struct SiteContacts
+    offsets::Vector{Int}
+    structure::Vector{Int32}
+    partner::Vector{Int8}
 end
 
-# The 48 rotations and reflections of the cube, as permutations of the 27 sites.
-function lattice_symmetries()
-    syms = Vector{Int}[]
-    for p in ((1, 2, 3), (1, 3, 2), (2, 1, 3), (2, 3, 1), (3, 1, 2), (3, 2, 1)), f in 0:7
-        g = Vector{Int}(undef, L)
-        for s in 1:L
-            c = lattice_coords(s)
-            o = ntuple(a -> ((f >> (a - 1)) & 1) == 1 ? 2 - c[p[a]] : c[p[a]], 3)
-            g[s] = lattice_site(o...)
-        end
-        push!(syms, g)
+function SiteContacts(contacts::Array{Int8, 3})
+    counts = zeros(Int, L)
+    for i in contacts
+        counts[i] += 1
     end
-    return syms
+    offsets = Vector{Int}(undef, L + 1)
+    offsets[1] = 1
+    for i in 1:L
+        offsets[i + 1] = offsets[i] + counts[i]
+    end
+    structure = Vector{Int32}(undef, offsets[end] - 1)
+    partner = Vector{Int8}(undef, offsets[end] - 1)
+    fill!(counts, 0)
+    for s in axes(contacts, 3), k in axes(contacts, 2)
+        i, j = contacts[1, k, s], contacts[2, k, s]
+        t = offsets[i] + counts[i]
+        structure[t] = s
+        partner[t] = j
+        counts[i] += 1
+        t = offsets[j] + counts[j]
+        structure[t] = s
+        partner[t] = i
+        counts[j] += 1
+    end
+    return SiteContacts(offsets, structure, partner)
 end
 
-# Whether the first `depth` sites of `path` are lexicographically no larger than their image
-# under each of the `symmetries`. The lexicographic comparison of a walk with its image is
-# decided by the first site where they differ, so a prefix that is larger than its image
-# cannot be extended to a canonical walk.
-function is_canonical(path::Vector{Int}, depth::Int, symmetries::Vector{Vector{Int}})
-    for g in symmetries
-        for i in 1:depth
-            a, b = path[i], g[path[i]]
-            b < a && return false
-            b > a && break
-        end
+"""
+    StructureSet(contact_maps)
+
+A set of structures competing to fold a sequence. `contact_maps` is a vector with one
+contact map per structure: a matrix of size `(ncontacts, 2)` whose rows are the pairs of
+residue positions (in `1:27`) in contact. All structures must have the same number of
+contacts.
+
+The functions that depend on the folding probability ([`pnat`](@ref),
+[`metropolis!`](@ref), [`parallel_tempering`](@ref), ...) take the set of competing
+structures as the keyword argument `structures`, and refer to a structure by its index in
+that set. The package provides two sets:
+
+- [`STRUCTURES`](@ref): all 103,346 compact structures of the lattice (the default);
+- [`shakhnovich_structures`](@ref)`()`: the subset of 10,000 structures used by Jacquin et
+  al. (2016).
+
+`length(S)` is the number of structures of a set `S`, [`contact_map`](@ref)`(S, s)` the
+contact map of its structure `s`, and [`structure_index`](@ref) finds a structure in a
+set, which translates indices between sets.
+
+# Example
+
+```julia
+# two structures with a single contact each
+S = StructureSet([[1 4], [1 6]])
+pnat(1, seq; structures = S)
+```
+"""
+mutable struct StructureSet
+    # contacts[:, k, s] are the two residues of contact k of structure s
+    const contacts::Array{Int8, 3}
+    # exp(-ΔE) for every energy difference ΔE = 0, 0.01, 0.02, ... that can occur between
+    # two structures of the set
+    const boltzmann::Vector{Float64}
+    # built on first use by `site_contacts`
+    @atomic sites::Union{Nothing, SiteContacts}
+
+    function StructureSet(contacts::Array{Int8, 3})
+        size(contacts, 1) == 2 && size(contacts, 2) > 0 && size(contacts, 3) > 0 ||
+            throw(ArgumentError("a structure set needs at least one structure, with at least one contact"))
+        all(i -> 1 ≤ i ≤ L, contacts) ||
+            throw(ArgumentError("contacts must be between residue positions in 1:$L"))
+        all(contacts[1, k, s] != contacts[2, k, s] for s in axes(contacts, 3), k in axes(contacts, 2)) ||
+            throw(ArgumentError("a residue cannot be in contact with itself"))
+        span = size(contacts, 2) * (Int(maximum(MJ_INT)) - Int(minimum(MJ_INT)))
+        return new(contacts, exp.(-(0:span) ./ 100), nothing)
     end
-    return true
 end
 
-# Depth-first extension of `path` (which occupies `depth` sites so far, and is canonical)
-# over all self-avoiding continuations, pruning the ones that are not canonical. Complete
-# walks are converted to a contact map (flattened as `[i1, j1, i2, j2, ...]`) and appended
-# to `out`.
-function walk!(
-        out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, used::UInt32,
-        depth::Int, nbrs::Vector{Vector{Int}}, stabilizer::Vector{Vector{Int}}
-    )
-    if depth == L
-        contacts = Tuple{Int, Int}[]
-        for s in 1:L, u in nbrs[s]
-            u > s || continue
-            i, j = minmax(pos[s], pos[u])
-            j - i > 1 && push!(contacts, (i, j)) # adjacent sites not bonded along the chain
-        end
-        @assert length(contacts) == N_CONTACTS
-        sort!(contacts)
-        cm = Vector{Int}(undef, 2 * N_CONTACTS)
-        for (k, (i, j)) in enumerate(contacts)
-            cm[2k - 1] = i
-            cm[2k] = j
-        end
-        push!(out, cm)
-        return
+function StructureSet(contact_maps::AbstractVector{<:AbstractMatrix{<:Integer}})
+    isempty(contact_maps) && throw(ArgumentError("a structure set needs at least one structure"))
+    foreach(Base.require_one_based_indexing, contact_maps)
+    n = size(first(contact_maps), 1)
+    all(cm -> size(cm) == (n, 2), contact_maps) ||
+        throw(ArgumentError("contact maps must be matrices of size (ncontacts, 2), with the same number of contacts"))
+    all(cm -> all(i -> 1 ≤ i ≤ L, cm), contact_maps) ||
+        throw(ArgumentError("contacts must be between residue positions in 1:$L"))
+    contacts = Array{Int8, 3}(undef, 2, n, length(contact_maps))
+    for (s, cm) in enumerate(contact_maps), k in 1:n
+        contacts[1, k, s] = cm[k, 1]
+        contacts[2, k, s] = cm[k, 2]
     end
-    for u in nbrs[path[depth]]
-        if (used & (UInt32(1) << u)) == 0
-            path[depth + 1] = u
-            pos[u] = depth + 1
-            if is_canonical(path, depth + 1, stabilizer)
-                walk!(out, path, pos, used | (UInt32(1) << u), depth + 1, nbrs, stabilizer)
-            end
-        end
-    end
-    return
+    return StructureSet(contacts)
 end
+
+Base.length(S::StructureSet) = size(S.contacts, 3)
+
+ncontacts(S::StructureSet) = size(S.contacts, 2)
+
+Base.show(io::IO, S::StructureSet) =
+    print(io, "StructureSet with ", length(S), " structures of ", ncontacts(S), " contacts")
+
+# Per-site contact index of `S`, built on first use. Threads racing to build it compute
+# the same index, so whichever is stored is correct.
+function site_contacts(S::StructureSet)
+    sites = @atomic S.sites
+    sites === nothing || return sites
+    sites = SiteContacts(S.contacts)
+    @atomic S.sites = sites
+    return sites
+end
+
+# Validates the index of a structure of `S`.
+function check_structure(S::StructureSet, s::Integer)
+    return 1 ≤ s ≤ length(S) || throw(ArgumentError("structure index $s is not in 1:$(length(S))"))
+end
+
+"""
+    contact_map(S::StructureSet, s)
+
+Contact map of structure `s` of the set `S`: a `Matrix{Int}` of size `(ncontacts, 2)`
+whose rows are the pairs of residue positions in contact.
+
+```julia
+contact_map(STRUCTURES, STRUCTURE_A)  # the 28 contacts of structure A
+```
+"""
+function contact_map(S::StructureSet, s::Integer)
+    check_structure(S, s)
+    return Int[S.contacts[c, k, s] for k in 1:ncontacts(S), c in 1:2]
+end
+
+# Canonical representation of a contact map, independent of the order of the contacts and
+# of the order within each pair.
+contact_key(cm::AbstractMatrix{<:Integer}) = sort!([minmax(Int(cm[k, 1]), Int(cm[k, 2])) for k in axes(cm, 1)])
+
+"""
+    structure_index(S::StructureSet, cm::AbstractMatrix)
+    structure_index(S::StructureSet, s::Integer; from = STRUCTURES)
+
+Index within the set `S` of the structure with contact map `cm`, or `nothing` if it is not
+there. `cm` is a matrix of contact pairs as returned by [`contact_map`](@ref); the order
+of the contacts and the order within each pair are ignored.
+
+The second method looks for structure `s` of the set `from` (by default
+[`STRUCTURES`](@ref)), and so translates structure indices from one set to another.
+
+# Example
+
+```julia
+S10 = shakhnovich_structures()
+a = structure_index(S10, STRUCTURE_A)  # 625: index of structure A in the subset
+pnat(a, seq; structures = S10)
+```
+"""
+function structure_index(S::StructureSet, cm::AbstractMatrix{<:Integer})
+    size(cm, 2) == 2 || throw(ArgumentError("a contact map is a matrix of size (ncontacts, 2)"))
+    key = contact_key(cm)
+    length(key) == ncontacts(S) || return nothing
+    candidate = similar(key)
+    for s in 1:length(S)
+        for k in 1:ncontacts(S)
+            candidate[k] = minmax(Int(S.contacts[1, k, s]), Int(S.contacts[2, k, s]))
+        end
+        sort!(candidate)
+        candidate == key && return s
+    end
+    return nothing
+end
+
+structure_index(S::StructureSet, s::Integer; from::StructureSet = STRUCTURES) = structure_index(S, contact_map(from, s))
 
 """
     enumerate_structures()
@@ -91,13 +189,12 @@ the chain maps contact `(i, j)` to `(28 - j, 28 - i)`, which in general gives a 
 contact map, so a structure and its chain reversal count as distinct structures (62 of
 them are their own reversal).
 
-Returns an `Array{Int, 3}` of size `(28, 103346, 2)`: `structures[:, s, :]` gives the 28
-contact pairs of structure `s`, as rows `(i, j)` with `i < j`, sorted lexicographically.
-The enumeration order is deterministic. Takes about a second.
+Returns a [`StructureSet`](@ref). Each contact map lists its 28 contacts as rows `(i, j)`
+with `i < j`, sorted lexicographically. The enumeration order is deterministic. Takes
+about a second.
 
 The result is available pre-computed as [`STRUCTURES`](@ref), which is the default set of
-competing structures in [`pnat`](@ref), [`metropolis!`](@ref) and related functions; this
-function is only needed to regenerate it.
+competing structures; this function is only needed to regenerate it.
 
 # References
 
@@ -105,86 +202,16 @@ function is only needed to regenerate it.
   copolymers with random sequence of links." *The Journal of Chemical Physics* 93.8
   (1990): 5967-5971.
 """
-function enumerate_structures()
-    nbrs = lattice_neighbors()
-    syms = lattice_symmetries()
-    out = Vector{Int}[]
-    # A walk through the 27 sites must start on the majority sublattice (corners or face
-    # centres). Every walk is the image under a cube symmetry of one starting from the
-    # corner (0,0,0) or from the face centre (1,1,0), so it suffices to start from these two
-    # sites and keep the walks that are minimal among their images under the symmetries
-    # fixing the starting site (the stabilizer).
-    for s0 in (lattice_site(0, 0, 0), lattice_site(1, 1, 0))
-        stabilizer = [g for g in syms if g[s0] == s0 && g != 1:L]
-        path = zeros(Int, L)
-        pos = zeros(Int, L)
-        path[1] = s0
-        pos[s0] = 1
-        walk!(out, path, pos, UInt32(1) << s0, 1, nbrs, stabilizer)
-    end
-    cms = reshape(reduce(hcat, out), 2, N_CONTACTS, length(out))
-    return permutedims(cms, (2, 3, 1))
-end
-
-# Validates an array of structures: `structures[:, s, :]` must be the contact pairs of structure `s`.
-function check_structures(structures::AbstractArray{Int, 3})
-    return @assert size(structures, 3) == 2 "structures must be an array of size (ncontacts, nstructures, 2)"
-end
-
-# Validates an integer-coded sequence.
-function check_sequence(seq::AbstractVector{Int})
-    @assert length(seq) == L "sequence must have length $L"
-    return @assert all(a -> 1 ≤ a ≤ 20, seq) "amino acid indices must be in 1:20"
-end
-
-# Canonical representation of a contact map, independent of the order of the contacts and
-# of the order within each pair.
-contact_key(cm::AbstractMatrix{Int}) = sort!([minmax(cm[k, 1], cm[k, 2]) for k in axes(cm, 1)])
-
-"""
-    structure_index(structures, cm::AbstractMatrix{Int})
-    structure_index(structures, cm::Int)
-
-Index within `structures` of the structure with contact map `cm`, or `nothing` if it is not
-there. `structures` is an array of structures such as [`STRUCTURES`](@ref) or
-[`SHAKHNOVICH_STRUCTURES`](@ref). `cm` is a `28 × 2` matrix of contact pairs, such as
-`STRUCTURES[:, CONTACT_MAP_A, :]`; the order of the contacts and the order within each
-pair are ignored. If `cm` is an integer, it refers to structure `STRUCTURES[:, cm, :]` of
-the default set.
-
-# Example
-
-```julia
-a = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)  # 625: index of structure A in the reference set
-pnat(a, seq; structures = SHAKHNOVICH_STRUCTURES)
-```
-"""
-function structure_index(structures::AbstractArray{Int, 3}, cm::AbstractMatrix{Int})
-    check_structures(structures)
-    key = contact_key(cm)
-    length(key) == size(structures, 1) || return nothing
-    candidate = similar(key)
-    for s in axes(structures, 2)
-        for (t, k) in enumerate(axes(structures, 1))
-            candidate[t] = minmax(structures[k, s, 1], structures[k, s, 2])
-        end
-        sort!(candidate)
-        candidate == key && return s
-    end
-    return nothing
-end
-
-structure_index(structures::AbstractArray{Int, 3}, cm::Int) = structure_index(structures, STRUCTURES[:, cm, :])
+enumerate_structures() = StructureSet(compact_contact_maps())
 
 """
     STRUCTURES
 
-Contact maps of all 103,346 compact structures of a 27-mer on the 3×3×3 cubic lattice, as
-generated by [`enumerate_structures`](@ref). An `Array{Int, 3}` of size `(28, 103346, 2)`;
-use `STRUCTURES[:, s, :]` to get the contact pairs of structure `s`.
+The [`StructureSet`](@ref) of all 103,346 compact structures of a 27-mer on the 3×3×3
+cubic lattice, as generated by [`enumerate_structures`](@ref).
 
 This is the default set of competing structures in [`pnat`](@ref), [`metropolis!`](@ref)
-and related functions. See [`SHAKHNOVICH_STRUCTURES`](@ref) for the representative subset
+and related functions. See [`shakhnovich_structures`](@ref) for the representative subset
 of 10,000 structures used by Jacquin et al. (2016).
 """
 const STRUCTURES = enumerate_structures()
@@ -194,39 +221,79 @@ const STRUCTURES = enumerate_structures()
 
 Number of compact structures in [`STRUCTURES`](@ref) (103,346).
 """
-const N_STRUCTURES = size(STRUCTURES, 2)
+const N_STRUCTURES = length(STRUCTURES)
 
-# Index in STRUCTURES of structure `s` of SHAKHNOVICH_STRUCTURES.
-jacquin_structure(s::Int) = something(structure_index(STRUCTURES, SHAKHNOVICH_STRUCTURES[:, s, :]))
+# The subset is read from an artifact that is downloaded on first use, so it is not loaded
+# with the package.
+const shakhnovich_set = Base.OncePerProcess{StructureSet}() do
+    # one contact per row, "structure i j", the 28 contacts of a structure on consecutive rows
+    data = readdlm(joinpath(artifact"ContactMaps", "contact_maps_10000.dat"), Int)
+    contacts = reshape(Int8.(data[:, 2:3]), N_CONTACTS, :, 2) # [contact, structure, residue]
+    return StructureSet(permutedims(contacts, (3, 1, 2)))
+end
 
 """
-    CONTACT_MAP_A
+    shakhnovich_structures()
+
+The [`StructureSet`](@ref) of the representative subset of 10,000 compact structures
+selected by the Shakhnovich group (Heo, Maslov & Shakhnovich, 2011) out of the 103,346 of
+[`STRUCTURES`](@ref), and used as the set of competing structures by Jacquin et al. (2016)
+and Tubiana et al. (2019).
+
+Pass `structures = shakhnovich_structures()` to [`pnat`](@ref), [`metropolis!`](@ref) and
+related functions to compete only against this set, as in those papers and in the
+[`Hugo_MSA_pnat`](@ref) values. Structure indices refer to the set in use; use
+[`structure_index`](@ref) to translate between the two sets. For example,
+`structure_index(shakhnovich_structures(), STRUCTURE_A)` gives the index (625) of reference
+structure A in this set.
+
+The contact maps are downloaded the first time this function is called, and the set is
+built once per session.
+
+# References
+
+- Heo, M., Maslov, S., and Shakhnovich, E. "Topology of protein interaction network shapes
+  protein abundances and strengths of their functional and nonspecific interactions."
+  *Proceedings of the National Academy of Sciences* 108.10 (2011): 4258-4263.
+- Jacquin, H., et al. "Benchmarking inverse statistical approaches for protein structure
+  and design with exactly solvable models." *PLoS Computational Biology* 12.5 (2016):
+  e1004889.
+"""
+shakhnovich_structures() = shakhnovich_set()
+
+# The reference structures of Jacquin et al. (2016) are given there as indices in the
+# subset of 10,000 structures. Their indices in STRUCTURES are written out here, so that
+# loading the package does not need the subset; they depend on the order of the
+# enumeration, and the tests check them against the subset.
+
+"""
+    STRUCTURE_A
 
 Index in [`STRUCTURES`](@ref) of reference structure A of Jacquin et al. (2016), which is
-structure 625 of [`SHAKHNOVICH_STRUCTURES`](@ref).
+structure 625 of [`shakhnovich_structures`](@ref).
 """
-const CONTACT_MAP_A = jacquin_structure(625)
+const STRUCTURE_A = 22451
 
 """
-    CONTACT_MAP_B
+    STRUCTURE_B
 
 Index in [`STRUCTURES`](@ref) of reference structure B of Jacquin et al. (2016), which is
-structure 848 of [`SHAKHNOVICH_STRUCTURES`](@ref).
+structure 848 of [`shakhnovich_structures`](@ref).
 """
-const CONTACT_MAP_B = jacquin_structure(848)
+const STRUCTURE_B = 65036
 
 """
-    CONTACT_MAP_C
+    STRUCTURE_C
 
 Index in [`STRUCTURES`](@ref) of reference structure C of Jacquin et al. (2016), which is
-structure 6683 of [`SHAKHNOVICH_STRUCTURES`](@ref).
+structure 6683 of [`shakhnovich_structures`](@ref).
 """
-const CONTACT_MAP_C = jacquin_structure(6683)
+const STRUCTURE_C = 66913
 
 """
-    CONTACT_MAP_D
+    STRUCTURE_D
 
 Index in [`STRUCTURES`](@ref) of reference structure D of Jacquin et al. (2016), which is
-structure 6685 of [`SHAKHNOVICH_STRUCTURES`](@ref).
+structure 6685 of [`shakhnovich_structures`](@ref).
 """
-const CONTACT_MAP_D = jacquin_structure(6685)
+const STRUCTURE_D = 90697

@@ -39,9 +39,8 @@ python docs/figures/tubiana2019/plot_fig4.py stats_subset fig4_subset.png "subse
 # Full set: four independent parallel-tempering ladders, 26 replicas each,
 # beta_max=1000, 4000 burn-in rounds, initially 9000 draws per ladder, thin=2,
 # five local mutations per replica per round. Use NEW output directories.
-# The documented run began with the original floating-point kernel.
-julia -t 4 --project=. docs/figures/tubiana2019/sample_pt.jl full_pt_initial 4 9000 1000 4000 2 5 float
-# Continue with exact integer caching until all monitored gates pass.
+julia -t 4 --project=. docs/figures/tubiana2019/sample_pt.jl full_pt_initial 4 9000 1000 4000 2 5
+# Continue from the final states until all monitored gates pass.
 # Set TUBIANA_PYTHON if the required Python executable is not named python.
 julia -t 4 --project=. docs/figures/tubiana2019/continue_pt.jl full_pt_initial full_pt 2000 5
 # Inspect diagnostics.json/observables.csv and diagnostics.png before interpreting.
@@ -52,12 +51,18 @@ python docs/figures/tubiana2019/plot_fig4.py stats_all fig4_all.png "parallel te
 python docs/figures/tubiana2019/compare_stats.py stats_subset stats_all comparison.png
 ```
 
-`sample_pt.jl OUT [RUNS NSEQS BETA BURNIN THIN LOCAL_STEPS CACHE]` records all inputs,
+`sample_pt.jl OUT [RUNS NSEQS BETA BURNIN THIN LOCAL_STEPS]` records all inputs,
 independent RNG seeds, code hashes, cold sequences, temperature traces, exchange
 acceptance, and round trips. It checks 50 saved probabilities per run by recomputing
 the complete energy sum. Increasing `NSEQS` or changing the thinning interval does
-not by itself establish equilibrium. `CACHE` defaults to `auto`; use `float` to
-reproduce the initial phase above or `integer` to require the accelerated kernel.
+not by itself establish equilibrium.
+
+The documented run began with version 2.1 of the package, whose initial phase kept
+contact energies in floating point; the continuation, like the package since version 3,
+keeps them as exact integers in units of 0.01. Both are the same transition kernel:
+rerunning the initial phase with integer energies reproduces all 36,000 of its saved
+sequences, and continuing it reproduces the saved continuation (checked on its first
+8,000 draws).
 
 `continue_pt.jl SOURCE OUT [BATCH_SAMPLES=2000] [CHECK_EVERY=5]` preserves all initial
 draws and extends the same four ladders with the same temperatures and proposal
@@ -70,9 +75,9 @@ The initial driver records final states but not RNG states, so the continuation
 starts with documented fresh independent RNG seeds. Thereafter, atomic per-ladder
 checkpoints preserve both RNGs and temperature states. Repeating the same command
 resumes the last completed chunks. Keep the Julia version, sampler source, source
-directory, and batch settings fixed when resuming. Chunks end on 100-round
-boundaries so cache refreshes and alternating swap phases match an uninterrupted
-call. Endpoint accounting requires the even ladder and `thin=2` used here.
+directory, and batch settings fixed when resuming. Chunks end after an even number
+of rounds so the alternating swap phases match an uninterrupted call. Endpoint
+accounting requires the even ladder and `thin=2` used here.
 The output retains cold draws, temperature traces, direct probability checks, and
 each convergence report. Original and continuation phases have separate code
 hashes and seeds in `parameters.toml`.

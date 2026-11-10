@@ -12,7 +12,9 @@ used by Jacquin et al. (2016)).
 
 This package does not export any symbols; everything is accessed either with the
 `LatticeProteins.` prefix or by importing the names explicitly, e.g.
-`using LatticeProteins: pnat, energy`.
+`using LatticeProteins: pnat, energy`. The public API consists of the names documented in
+the [Reference](@ref), which are declared `public`; anything else is internal and may
+change in any release.
 
 ## Installation
 
@@ -26,18 +28,17 @@ Pkg.add("LatticeProteins")
 ## Quick start
 
 ```julia
-using LatticeProteins: pnat, energy, onehot, aaseq, potts, random_msa,
-    CONTACT_MAP_A, Hugo_MSA, Hugo_MSA_pnat
+using LatticeProteins: pnat, energy, potts, random_msa, STRUCTURE_A
 
 # Compute the probability that a sequence folds into structure A
 seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")  # convert to integer-coded sequence
-p = pnat(CONTACT_MAP_A, seq)
+p = pnat(STRUCTURE_A, seq)
 
 # Compute the contact energy
-E = energy(CONTACT_MAP_A, seq)
+E = energy(STRUCTURE_A, seq)
 
 # Generate sequences that fold into structure A via Metropolis sampling
-msa = random_msa(CONTACT_MAP_A; nseqs=100, β=100, nsteps=1000)
+msa = random_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
 ```
 
 See the [Tutorial](@ref) for a worked walkthrough and the [Reference](@ref) for the

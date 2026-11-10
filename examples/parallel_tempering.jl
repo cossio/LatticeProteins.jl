@@ -4,19 +4,17 @@
 # Defaults: 2 independent ladders, 5000 burn-in rounds, 500 samples, thin=10.
 # Each round has 10 mutation proposals per replica. CSVs include cold sequences,
 # pnat/replica-ID traces, and per-edge acceptance; summary.toml records parameters.
-# Controls use independent beta=3000 chains with the SAME cached mutation kernel
-# and total proposal budget as each ladder (one control chain per temperature).
-# This deliberately uses private kernels to isolate the effect of exchanges.
+# Controls are independent beta=3000 Metropolis chains (`metropolis!`), which make the
+# same local moves as the replicas of a ladder, with the same total proposal budget as
+# each ladder (one control chain per temperature). They isolate the effect of exchanges.
 # The default is all 103,346 structures; the optional final argument selects the
 # 10,000-structure subset. Target indices are translated to the selected set.
 
-using LatticeProteins: LatticeProteins, parallel_tempering, CONTACT_MAP_A, L, aaseq,
-    STRUCTURES, SHAKHNOVICH_STRUCTURES, structure_index
+using LatticeProteins: parallel_tempering, metropolis!, pnat, aaseq, structure_index,
+    STRUCTURES, shakhnovich_structures, STRUCTURE_A, L
 using Random: Xoshiro
 using DelimitedFiles: writedlm
 using TOML: print as print_toml
-
-const LP = LatticeProteins
 
 function save_csv(path, header, rows)
     return open(path, "w") do io
@@ -25,23 +23,17 @@ function save_csv(path, header, rows)
     end
 end
 
-function controls(initial, seed, burnin, nseqs, thin, local_steps, cm, structures)
+function controls(initial, seed, burnin, nseqs, thin, local_steps, s, structures)
     rng = Xoshiro(seed)
-    sites = LP.site_contacts(structures)
-    replicas = [LP._TemperingReplica(view(initial, :, i), cm, i, structures) for i in axes(initial, 2)]
-    ps = Matrix{Float64}(undef, length(replicas), nseqs)
-    for (i, replica) in enumerate(replicas)
-        for round_index in 1:(burnin + nseqs * thin)
-            LP._tempering_local!(rng, replica, cm, 3000.0, local_steps, sites)
-            if round_index % 100 == 0
-                LP.energies!(replica.energies, replica.seq, structures)
-                replica.loss = LP._folding_loss(replica.energies, cm)
-            end
-            if round_index > burnin && (round_index - burnin) % thin == 0
-                ps[i, (round_index - burnin) ÷ thin] = exp(-replica.loss)
-            end
+    ps = Matrix{Float64}(undef, size(initial, 2), nseqs)
+    for i in axes(initial, 2)
+        seq = initial[:, i]
+        metropolis!(seq, s; β = 3000, nsteps = burnin * local_steps, structures, rng)
+        for sample in 1:nseqs
+            metropolis!(seq, s; β = 3000, nsteps = thin * local_steps, structures, rng)
+            ps[i, sample] = pnat(s, seq; structures)
         end
-        println("control seed=$seed chain=$i final_pnat=$(exp(-replica.loss))")
+        println("control seed=$seed chain=$i final_pnat=$(ps[i, end])")
         flush(stdout)
     end
     return ps
@@ -57,8 +49,8 @@ function main(args)
     thin = length(args) >= 5 ? parse(Int, args[5]) : 10
     which = length(args) >= 6 ? args[6] : "all"
     which in ("all", "shakhnovich") || error("structure set must be all or shakhnovich")
-    structures = which == "all" ? STRUCTURES : SHAKHNOVICH_STRUCTURES
-    cm = which == "all" ? CONTACT_MAP_A : structure_index(structures, CONTACT_MAP_A)
+    structures = which == "all" ? STRUCTURES : shakhnovich_structures()
+    s = structure_index(structures, STRUCTURE_A) # index of structure A in the chosen set
     runs > 0 && burnin >= 0 && nseqs > 0 && thin > 0 || error("invalid run lengths")
     local_steps = 10
     betas = [0.0; exp.(range(log(0.1), log(3000.0); length = 31))]
@@ -72,7 +64,7 @@ function main(args)
         if isodd(job)
             # Independent jobs already run in parallel; keep each ladder serial.
             elapsed = @elapsed r = parallel_tempering(
-                cm; betas, burnin,
+                s; betas, burnin,
                 nseqs, thin, local_steps, structures, initial_seqs = initial[run],
                 rng = Xoshiro(seed), threaded = false
             )
@@ -118,7 +110,7 @@ function main(args)
             )
             println("PT run=$run mean_pnat=$(summaries[job]["pnat_mean"]) round_trips=$(sum(d.round_trips)) seconds=$elapsed")
         else
-            elapsed = @elapsed ps = controls(initial[run], seed, burnin, nseqs, thin, local_steps, cm, structures)
+            elapsed = @elapsed ps = controls(initial[run], seed, burnin, nseqs, thin, local_steps, s, structures)
             save_csv(
                 joinpath(out, "control_$(run)_trace.csv"),
                 ["production_round", "chain", "pnat"],
@@ -136,8 +128,8 @@ function main(args)
     open(joinpath(out, "summary.toml"), "w") do io
         print_toml(
             io, Dict(
-                "structure" => cm, "structure_set" => which,
-                "nstructures" => size(structures, 2), "betas" => betas,
+                "structure" => s, "structure_set" => which,
+                "nstructures" => length(structures), "betas" => betas,
                 "runs" => runs, "burnin_rounds" => burnin, "nseqs" => nseqs,
                 "thin_rounds" => thin, "local_steps" => local_steps,
                 "proposals_per_method_per_run" => length(betas) * (burnin + nseqs * thin) * local_steps,

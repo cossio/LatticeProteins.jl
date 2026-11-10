@@ -1,6 +1,5 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
-DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 LatticeProteins = "2b3394db-9f9c-454f-a26a-0ad872321417"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

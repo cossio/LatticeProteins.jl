@@ -1,8 +1,8 @@
-using Test: @test, @testset, @inferred, @test_throws
+using Test: @test, @testset, @test_throws
 using LinearAlgebra: I
 using LatticeProteins: onehot, potts, aaseq, AMINO_ACIDS
 
-@testset "onehot" begin
+@testset "sequences" begin
     @testset "onehot - single string" begin
         # Full alphabet produces identity matrix
         @test onehot(AMINO_ACIDS) == I
@@ -36,6 +36,13 @@ using LatticeProteins: onehot, potts, aaseq, AMINO_ACIDS
         @test size(X2) == (21, 3, 2)
         @test all(X2[1, :, 1])   # all C in first seq
         @test all(X2[2, :, 2])   # all M in second seq
+
+        # same encoding as one sequence at a time
+        seqs3 = ["CMFILVWYAG", "TSNQDEHRKP", "-PKRHEDQNS"]
+        X3 = onehot(seqs3)
+        @test X3 isa BitArray{3}
+        @test all(X3[:, :, n] == onehot(seqs3[n]) for n in eachindex(seqs3))
+        @test_throws ArgumentError onehot(["CMF", "IL"])
     end
 
     @testset "onehot - integer input" begin
@@ -48,6 +55,8 @@ using LatticeProteins: onehot, potts, aaseq, AMINO_ACIDS
         @test X[1, 1] == true
         @test X[2, 2] == true
         @test X[3, 3] == true
+
+        @test onehot(Int8[1, 2, 3]) == X
 
         # Matrix input
         M = [1 2; 3 4]
@@ -79,8 +88,19 @@ using LatticeProteins: onehot, potts, aaseq, AMINO_ACIDS
 
         # potts from vector of strings
         P = potts(["CMF", "ILV"])
+        @test P isa Matrix{Int}
         @test P[:, 1] == [1, 2, 3]
         @test P[:, 2] == [4, 5, 6]
+        @test potts(["CMF", "ILV"]) == potts(onehot(["CMF", "ILV"]))
+        @test potts(SubString("XCMFX", 2, 4)) == [1, 2, 3]
+
+        # characters outside the alphabet have no integer code
+        @test_throws ArgumentError potts("CMX")
+        @test_throws ArgumentError potts("cmf")
+        @test_throws ArgumentError potts(["CMF", "ILX"])
+        # sequences of a matrix must have the same length
+        @test_throws ArgumentError potts(["CMF", "IL"])
+        @test_throws ArgumentError potts(String[])
     end
 
     @testset "aaseq" begin
@@ -102,6 +122,10 @@ using LatticeProteins: onehot, potts, aaseq, AMINO_ACIDS
         X = onehot(seqs)
         result = aaseq(X)
         @test result == seqs
+
+        @test aaseq(Int8[1, 2, 3]) == "CMF"
+        # a one-hot encoding has 21 rows
+        @test_throws ArgumentError aaseq(falses(20, 3))
     end
 
     @testset "roundtrip consistency" begin

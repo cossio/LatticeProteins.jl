@@ -1,9 +1,9 @@
 using Test: @test, @testset
-using LatticeProteins: LatticeProteins, Hugo_MSA, Hugo_MSA_pnat, potts, onehot, log_pnat,
-    metropolis!, structure_index, SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A, AMINO_ACIDS, L, N_CONTACTS
+using LatticeProteins: Hugo_MSA, Hugo_MSA_pnat, potts, onehot, pnat, metropolis!,
+    structure_index, contact_map, shakhnovich_structures, STRUCTURE_A, AMINO_ACIDS, L, N_CONTACTS
 using LinearAlgebra: eigen, Symmetric, dot, norm
 using Statistics: mean, cor
-using Random: seed!
+using Random: Xoshiro
 
 # Reproduces the statistics of the lattice-protein alignment of structure A shown in Fig. 4 of
 #   Tubiana, Cocco & Monasson. "Learning compositional representations of interacting systems
@@ -13,11 +13,11 @@ using Random: seed!
 # Metropolis sampling at β = 1000 against the 10,000 reference structures, keeping one
 # sequence at regular intervals. We sample a fresh alignment with this package and compare
 # its site frequencies, conservation profile, first principal component and the average
-# covariance between amino acids on contacting sites (panels d, e and f of the figure) with
+# covariance between amino acids on contacting sites (panels d to g of the figure) with
 # the reference alignment of Jacquin et al. bundled with the package.
 
-const S = SHAKHNOVICH_STRUCTURES
-const A10 = structure_index(S, CONTACT_MAP_A)
+const S = shakhnovich_structures()
+const A10 = structure_index(S, STRUCTURE_A)
 
 # Site frequencies (20 × 27), conservation profile, first principal component (20 × 27) and
 # average covariance between amino acids on sites in contact in structure A (20 × 20).
@@ -28,7 +28,7 @@ function fig4_statistics(seqs::AbstractMatrix{Int})
     cons = [log(20) + sum(p > 0 ? p * log(p) : 0.0 for p in f[:, i]) for i in 1:L]
     Xc = X .- mean(X; dims = 2)
     w = eigen(Symmetric(Xc * Xc' / M)).vectors[:, end]
-    cm = S[:, A10, :]
+    cm = contact_map(S, A10)
     C = zeros(20, 20)
     for k in 1:N_CONTACTS
         i, j = cm[k, 1], cm[k, 2]
@@ -53,18 +53,18 @@ end
     # keeping one sequence every 1,000 steps as in Jacquin et al. (2016). At this β a chain
     # rarely crosses between the two subfamilies of the alignment (the two modes of panel g
     # of the figure), so several independent chains are needed to sample both.
-    seed!(2019)
+    rng = Xoshiro(2019)
     nchains, nsamples = 20, 25
     fresh = zeros(Int, L, nchains * nsamples)
     pnats = zeros(nchains * nsamples)
     for c in 1:nchains
-        seq = rand(1:20, L)
-        metropolis!(seq, A10; β = 1000, nsteps = 10_000, structures = S) # burn-in
+        seq = rand(rng, 1:20, L)
+        metropolis!(seq, A10; β = 1000, nsteps = 10_000, structures = S, rng) # burn-in
         for t in 1:nsamples
-            metropolis!(seq, A10; β = 1000, nsteps = 1_000, structures = S)
+            metropolis!(seq, A10; β = 1000, nsteps = 1_000, structures = S, rng)
             k = (c - 1) * nsamples + t
             fresh[:, k] = seq
-            pnats[k] = exp(log_pnat(A10, seq; structures = S))
+            pnats[k] = pnat(A10, seq; structures = S)
         end
     end
     # at β = 1000 the chains sample sequences folding into A with probability ≈ 0.995

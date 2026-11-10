@@ -1,139 +1,123 @@
-# Contacts of a set of structures grouped by residue position: for each position `i`, the
-# structures having a contact at `i` and the partner residue in that contact (stored in
-# CSR layout: the entries of position `i` are `offsets[i]:(offsets[i+1]-1)`). This lets
-# `metropolis!` update the energies of all structures after a single-site mutation by
-# visiting only the contacts that involve the mutated position.
-struct SiteContacts
-    offsets::Vector{Int}
-    structure::Vector{Int32}
-    partner::Vector{Int32}
+# State of a Monte Carlo chain targeting structure `s` of a structure set: the sequence,
+# its energies in all the structures of the set (in units of 0.01), a buffer for the
+# energies of a proposed sequence, and `loss = -log_pnat(s, seq)`. Both samplers of the
+# package advance chains with `local_steps!`.
+mutable struct Chain
+    seq::Vector{Int}
+    energies::Vector{Int32}
+    trial::Vector{Int32}
+    loss::Float64
 end
 
-function SiteContacts(structures::AbstractArray{Int, 3})
-    check_structures(structures)
-    counts = zeros(Int, L)
-    for s in axes(structures, 2), k in axes(structures, 1)
-        counts[structures[k, s, 1]] += 1
-        counts[structures[k, s, 2]] += 1
-    end
-    offsets = Vector{Int}(undef, L + 1)
-    offsets[1] = 1
-    for i in 1:L
-        offsets[i + 1] = offsets[i] + counts[i]
-    end
-    structure = Vector{Int32}(undef, offsets[end] - 1)
-    partner = similar(structure)
-    fill!(counts, 0)
-    for s in axes(structures, 2), k in axes(structures, 1)
-        i, j = structures[k, s, 1], structures[k, s, 2]
-        t = offsets[i] + counts[i]
-        structure[t] = s
-        partner[t] = j
-        counts[i] += 1
-        t = offsets[j] + counts[j]
-        structure[t] = s
-        partner[t] = i
-        counts[j] += 1
-    end
-    return SiteContacts(offsets, structure, partner)
-end
-
-# Per-site contact index of the default structure set, built on first use.
-const default_site_contacts = Base.OncePerProcess{SiteContacts}() do
-    SiteContacts(STRUCTURES)
-end
-
-# Per-site contact index of `structures`; cached for the default set.
-site_contacts(structures::AbstractArray{Int, 3}) = structures === STRUCTURES ? default_site_contacts() : SiteContacts(structures)
-
-"""
-    metropolis!(seq::AbstractVector{Int}, cm::Int; β=1, nsteps=1, structures=STRUCTURES)
-
-Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`, targeting
-structure `cm`. The sequence is mutated in place.
-
-At each step, a random position is selected and mutated to a random amino acid (1–20).
-The move is accepted or rejected using the Metropolis criterion with inverse temperature `β`,
-where the energy is `-log_pnat(cm, seq; structures)`.
-
-The energies of `seq` in all structures are kept and updated incrementally after each
-mutation, so a step costs much less than a call to [`log_pnat`](@ref). This requires a
-per-site index of the contacts of `structures`, which is cached for the default set and
-rebuilt on every call for any other set; for repeated short runs on another set, prefer
-[`random_msa`](@ref) or a single call with a large `nsteps`.
-
-# Arguments
-- `seq`: integer-coded amino acid sequence of length 27 (values in `1:20`).
-- `cm`: target structure index (in `structures`).
-- `β`: inverse temperature (higher values favor sequences that fold into `cm`).
-- `nsteps`: number of Monte Carlo steps to perform.
-- `structures`: set of competing structures, by default all compact structures
-  [`STRUCTURES`](@ref). Pass [`SHAKHNOVICH_STRUCTURES`](@ref) to compete only against the
-  subset of 10,000 structures used by Jacquin et al. (2016) (`cm` then indexes that set).
-
-Returns the mutated `seq`.
-"""
-function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real = 1, nsteps::Int = 1, structures::AbstractArray{Int, 3} = STRUCTURES)
-    check_sequence(seq)
-    return metropolis!(seq, cm, structures, site_contacts(structures); β, nsteps)
+# Assumes `seq` has been validated with `check_sequence`, and `s` with `check_structure`.
+# The sequence is copied.
+function Chain(seq::AbstractVector{<:Integer}, s::Integer, S::StructureSet)
+    E = energies!(Vector{Int32}(undef, length(S)), seq, S)
+    return Chain(collect(Int, seq), E, similar(E), folding_loss(E, s, S.boltzmann))
 end
 
 # Given the energies `E` of `seq` in all structures, writes into `E1` the energies of the
-# sequence obtained by mutating position `i` of `seq` to amino acid `new_aa`, visiting only
-# the contacts that involve position `i`. Assumes `seq` has been validated with
-# `check_sequence`, and `sites == SiteContacts(structures)` for the structures of `E`.
-function mutate_energies!(E1::Vector{Float64}, E::Vector{Float64}, seq::AbstractVector{Int}, i::Int, new_aa::Int, sites::SiteContacts)
+# sequence obtained by mutating position `i` of `seq` to amino acid `aa`, visiting only
+# the contacts that involve position `i`. `sites` is the per-site contact index of the
+# structure set of `E`.
+function mutate_energies!(E1::Vector{Int32}, E::Vector{Int32}, seq::Vector{Int}, i::Int, aa::Int, sites::SiteContacts)
     copyto!(E1, E)
-    old_aa = seq[i]
+    old = seq[i]
     # energy change of a contact between position i and an amino acid b
-    ΔE = ntuple(b -> MJ[new_aa, b] - MJ[old_aa, b], Val(20))
+    ΔE = ntuple(b -> MJ_INT[aa, b] - MJ_INT[old, b], Val(20))
     @inbounds for t in sites.offsets[i]:(sites.offsets[i + 1] - 1)
         E1[sites.structure[t]] += ΔE[seq[sites.partner[t]]]
     end
     return E1
 end
 
-# Assumes `seq` has been validated with `check_sequence`, and `sites == SiteContacts(structures)`.
-function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArray{Int, 3}, sites::SiteContacts; β::Real, nsteps::Int)
-    E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures) # energies of seq in all structures
-    E1 = similar(E) # energies of the proposed sequence
-    F = _folding_loss(E, cm)
+# Performs `nsteps` Metropolis steps on `chain` at inverse temperature `β`, with energy
+# `-log_pnat` of structure `s`, and returns the number of accepted moves. A step proposes
+# to mutate a uniformly chosen position to one of the other 19 amino acids, chosen
+# uniformly. `sites` and `boltzmann` are those of the structure set of the chain.
+function local_steps!(
+        rng::AbstractRNG, chain::Chain, s::Integer, β::Real, nsteps::Integer,
+        sites::SiteContacts, boltzmann::Vector{Float64}
+    )
+    accepted = 0
     for _ in 1:nsteps
-        i = rand(1:length(seq)) # randomly select a position in the sequence
-        new_aa = rand(1:20)
-        if new_aa == seq[i]
-            randexp() # nothing changes; keep the random stream as if the move were evaluated
-            continue
-        end
-        mutate_energies!(E1, E, seq, i, new_aa, sites)
-        F1 = _folding_loss(E1, cm)
-        if β * (F1 - F) < randexp()
-            seq[i] = new_aa # accept move
-            F = F1
-            E, E1 = E1, E
+        i = rand(rng, 1:L)
+        aa = rand(rng, 1:19)
+        aa += aa >= chain.seq[i]
+        mutate_energies!(chain.trial, chain.energies, chain.seq, i, aa, sites)
+        loss = folding_loss(chain.trial, s, boltzmann)
+        if β * (loss - chain.loss) < randexp(rng)
+            chain.seq[i] = aa
+            chain.energies, chain.trial = chain.trial, chain.energies
+            chain.loss = loss
+            accepted += 1
         end
     end
+    return accepted
+end
+
+"""
+    metropolis!(seq, s; β = 1, nsteps = 1, structures = STRUCTURES, rng = default_rng())
+
+Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`, targeting
+structure `s`. The sequence is mutated in place, and returned.
+
+Each step proposes to mutate a random position to a different amino acid, chosen
+uniformly among the other 19. The move is accepted or rejected using the Metropolis
+criterion with inverse temperature `β`, where the energy is
+`-log_pnat(s, seq; structures)`. The stationary distribution is thus proportional to
+`pnat(s, seq; structures)^β`.
+
+The energies of `seq` in all structures are kept and updated incrementally after each
+mutation, so a step costs much less than a call to [`log_pnat`](@ref). They are computed
+from scratch at the start of each call: prefer one call with a large `nsteps` to many
+short ones.
+
+# Arguments
+- `seq`: integer-coded amino acid sequence of length 27 (values in `1:20`).
+- `s`: index of the target structure in `structures`.
+- `β`: inverse temperature (higher values favor sequences that fold into `s`).
+- `nsteps`: number of Monte Carlo steps to perform.
+- `structures`: the [`StructureSet`](@ref) of competing structures, by default all compact
+  structures [`STRUCTURES`](@ref).
+- `rng`: random number generator.
+
+See also [`random_msa`](@ref), [`parallel_tempering`](@ref).
+"""
+function metropolis!(
+        seq::AbstractVector{<:Integer}, s::Integer; β::Real = 1, nsteps::Integer = 1,
+        structures::StructureSet = STRUCTURES, rng::AbstractRNG = default_rng()
+    )
+    check_sequence(seq)
+    check_structure(structures, s)
+    nsteps ≥ 0 || throw(ArgumentError("nsteps must be nonnegative"))
+    chain = Chain(seq, s, structures)
+    local_steps!(rng, chain, s, β, nsteps, site_contacts(structures), structures.boltzmann)
+    copyto!(seq, chain.seq)
     return seq
 end
 
 """
-    random_msa(cm::Int; nseqs=1, β=1, nsteps=1000, structures=STRUCTURES)
+    random_msa(s; nseqs = 1, β = 1, nsteps = 1000, structures = STRUCTURES, rng = default_rng())
 
 Generate a random multiple sequence alignment (MSA) of `nseqs` sequences that fold into
-structure `cm`, using Metropolis Monte Carlo sampling.
+structure `s`, using Metropolis Monte Carlo sampling.
 
-Each sequence is initialized randomly and then evolved for `nsteps` Metropolis steps
-at inverse temperature `β`. Returns a `Matrix{Int}` of size `(27, nseqs)`, where each
-column is an integer-coded amino acid sequence. `structures` is the set of competing
-structures (see [`metropolis!`](@ref)).
+Each sequence is initialized randomly and then evolved independently for `nsteps`
+Metropolis steps at inverse temperature `β` (see [`metropolis!`](@ref)). Returns a
+`Matrix{Int}` of size `(27, nseqs)`, where each column is an integer-coded amino acid
+sequence.
 
-See also [`metropolis!`](@ref).
+See also [`metropolis!`](@ref), [`parallel_tempering`](@ref).
 """
-function random_msa(cm::Int; nseqs::Int = 1, β::Real = 1, nsteps::Int = 1000, structures::AbstractArray{Int, 3} = STRUCTURES)
-    sites = site_contacts(structures)
-    seqs = rand(1:20, L, nseqs)
+function random_msa(
+        s::Integer; nseqs::Integer = 1, β::Real = 1, nsteps::Integer = 1000,
+        structures::StructureSet = STRUCTURES, rng::AbstractRNG = default_rng()
+    )
+    nseqs ≥ 0 || throw(ArgumentError("nseqs must be nonnegative"))
+    seqs = rand(rng, 1:20, L, nseqs)
     for n in 1:nseqs
-        metropolis!(view(seqs, :, n), cm, structures, sites; β, nsteps)
+        metropolis!(view(seqs, :, n), s; β, nsteps, structures, rng)
     end
     return seqs
 end

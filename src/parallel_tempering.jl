@@ -56,8 +56,7 @@ function record_endpoints!(stages, trips, ids)
 end
 
 """
-    ParallelTempering(; betas, burnin = 1000, thin = 10, local_steps = 10,
-                      threaded = true, rng_mode = :per_temperature)
+    ParallelTempering(; betas, burnin = 1000, thin = 10, local_steps = 10, threaded = true)
 
 Sampling method of [`sample_msa`](@ref): replica exchange, targeting
 `pnat(s, seq)^betas[end]`. `betas` must contain at least two finite, nonnegative, strictly
@@ -71,15 +70,10 @@ two replicas the only edge is attempted every round. A swap is accepted with
 
 `burnin` rounds are discarded, then the coldest sequence is saved after every `thin`
 rounds until `nseqs` samples have been saved. Thus each replica receives
-`(burnin + nseqs * thin) * local_steps` mutation proposals.
-
-    sample_msa(s, ParallelTempering(; ...); nseqs = 100, rng = default_rng(), initial_seqs = nothing)
-
-`initial_seqs`, when provided, is a `(27, length(betas))` integer matrix of starting
-sequences, ordered hot to cold; it is copied. Otherwise each replica starts from an
+`(burnin + nseqs * thin) * local_steps` mutation proposals. Each replica starts from an
 independent uniform sequence.
 
-Use an explicit RNG for reproducible runs. By default, each temperature slot uses
+Pass an explicit `rng` to `sample_msa` for reproducible runs. Each temperature slot uses
 its own `Xoshiro` stream seeded from `rng`; swaps use `rng` serially. For fixed
 arguments and Julia version, results do not depend on thread count or scheduling.
 
@@ -88,22 +82,10 @@ with e.g. `--threads=4`). Set `threaded=false` when parallelizing independent la
 in the caller. Both modes use the same per-temperature streams and produce identical
 results.
 
-`rng_mode=:shared` with `threaded=false` uses `rng` for both local updates and swaps,
-without creating temperature streams. This makes a run resumable: a call with
-`burnin=0` that passes the same RNG and the `final_seqs` of the previous call as
-`initial_seqs` continues its trajectory exactly, provided the previous call ended on an
-even number of rounds (which preserves the alternation of the swap edges). It is also
-the RNG protocol of v2.1.0 and of the saved Tubiana PT alignment. The default
-`:per_temperature` mode creates fresh local streams on each call and is not a checkpoint
-interface.
-
-Returns a named tuple with:
+`sample_msa(s, ParallelTempering(; ...); nseqs, rng)` returns a named tuple with:
 - `samples`: coldest-replica MSA, size `(27, nseqs)`. Samples can be correlated.
-- `betas`: the fixed ladder used in the run.
-- `rng_mode`: the RNG protocol used (`:per_temperature` or `:shared`).
 - `logpnat`, `replica_ids`: `(length(betas), nseqs)` traces at saved rounds.
   Rows follow temperatures; IDs follow sequences through swaps.
-- `final_seqs`, `final_logpnat`: final states at every temperature.
 - `burnin_diagnostics`, `diagnostics`: separate burn-in and production counters.
   `local_attempts`/`local_accepts` are indexed by temperature;
   `swap_attempts`/`swap_accepts` by adjacent edge. `round_trips` is indexed by

@@ -87,6 +87,25 @@ MJ
 metropolis!
 ```
 
+### Continuing a parallel-tempering run
+
+The figure scripts extend a [`ParallelTempering`](@ref) run from a checkpoint, with three
+internal additions to its interface:
+
+- `ParallelTempering(; ..., threaded = false, rng_mode = :shared)` uses the `rng` given
+  to `sample_msa` for both local updates and swaps, without creating a stream per
+  temperature. The default is `rng_mode = :per_temperature`, which creates fresh local
+  streams on each call and cannot be resumed.
+- `sample_msa(s, method; ..., initial_seqs)` starts the replicas from the columns of
+  `initial_seqs`, a `(27, length(betas))` integer matrix ordered hot to cold.
+- The result has the fields `final_seqs` and `final_logpnat`, the final states at every
+  temperature (and `betas`, `rng_mode`, which repeat the method's).
+
+A call with `burnin = 0` that passes the same RNG and the `final_seqs` of the previous
+call as `initial_seqs` continues its trajectory exactly, provided the previous call
+ended on an even number of rounds (which preserves the alternation of the swap edges).
+The shared stream is also the RNG protocol of v2.1.0 and of the saved Tubiana alignment.
+
 ### Reference alignments of Jacquin et al. (2016)
 
 These alignments were sampled against the subset of 10,000 structures.

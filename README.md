@@ -120,10 +120,9 @@ Start Julia with `--threads=4` (or another thread count) to run local replica up
 in parallel. Temperature-specific RNG streams make results identical to
 `threaded=false` for the same seed and Julia version. Use `threaded=false` when
 parallelizing multiple independent ladders externally. Seeded trajectories differ
-from the single-stream implementation in version 2.1.0.
-To reproduce that original protocol, as used by the saved Tubiana alignment, select
-`rng_mode=:shared` together with `threaded=false`. The figure drivers do this explicitly;
-this mode also lets a run be continued exactly from a checkpoint.
+from the single-stream implementation in version 2.1.0; the figure drivers select that
+original protocol, and continue runs from checkpoints, with internal options described
+in the [reference](https://cossio.github.io/LatticeProteins.jl/dev/reference/#Internals).
 
 For a reproducible comparison against independent Metropolis chains with the same
 total mutation budget, run:

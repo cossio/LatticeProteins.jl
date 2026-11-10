@@ -82,8 +82,8 @@ The output retains cold draws, temperature traces, direct probability checks, an
 each convergence report. Original and continuation phases have separate code
 hashes and seeds in `parameters.toml`.
 
-Both figure drivers explicitly use `threaded=false, rng_mode=:shared` inside each
-ladder and parallelize the four ladders externally. This preserves the single-stream
+Both figure drivers explicitly use `threaded=false` and the internal option
+`rng_mode=:shared` inside each ladder, and parallelize the four ladders externally. This preserves the single-stream
 protocol used to generate the saved alignment, including across chunk boundaries.
 The package's default `rng_mode=:per_temperature` uses the newer independent
 temperature streams; disabling threads alone does not select the original protocol.

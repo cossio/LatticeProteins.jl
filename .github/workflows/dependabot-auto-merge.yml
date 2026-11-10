@@ -14,13 +14,6 @@ name: Dependabot auto-merge
 # and `downgrade` against the old end. Accepted trade-off: a green run is the
 # review those PRs would have received anyway.
 #
-# Which checks are required is a branch protection setting on `main`; nothing in
-# this repository's files controls it. Checks are matched by job name, so if a
-# job in ci.yml is renamed, branch protection has to be updated with it.
-# Otherwise auto-merge waits forever for a check that never reports. The names:
-#   - Julia 1 - ubuntu-latest - default
-#   - Downgrade compat - Julia min - ubuntu-latest - default
-#
 # Deliberately uses no actions at all -- nothing to pin, nothing to update, and
 # no third party in the merge path.
 on: pull_request

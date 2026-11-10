@@ -9,8 +9,8 @@ compact structures compete, and a single energy kernel shared by all samplers.
 
 ### Breaking
 
-- **Public API.** The public names are declared `public`: `AMINO_ACIDS`, `L`, `potts`,
-  `aaseq`, `onehot`; `N_STRUCTURES`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`;
+- **Public API.** The public names are declared `public`: `L`, `potts`, `aaseq`,
+  `onehot`; `N_STRUCTURES`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`;
   `MJ`, `energy`, `pnat`, `log_pnat`; `metropolis!`, `random_msa`, `parallel_tempering`.
   Everything else is internal and can change in any release.
 - **Structures** are referred to by their index in `1:N_STRUCTURES`, and
@@ -34,11 +34,11 @@ compact structures compete, and a single energy kernel shared by all samplers.
 - **Errors.** Invalid arguments throw an `ArgumentError`: sequences of the wrong length
   or with amino acids outside `1:20` (previously an `AssertionError`), and structure
   indices outside `1:N_STRUCTURES` (previously a `BoundsError`).
-- **`potts`** throws an `ArgumentError` for characters outside `AMINO_ACIDS`, which it
+- **`potts`** throws an `ArgumentError` for characters outside the alphabet, which it
   used to code silently as cysteine (index 1), and for sequences of unequal lengths.
 - **Removed** `load_contact_maps`, `load_miyazawa_jernigan_matrix` and
-  `load_miyazawa_jernigan_aminoacids`: use `MJ` and `AMINO_ACIDS`.
-- `energies` and `N_CONTACTS` are internal.
+  `load_miyazawa_jernigan_aminoacids`: use `MJ`.
+- `AMINO_ACIDS`, `energies` and `N_CONTACTS` are internal.
 
 | 2.x | 3.0 |
 |:--|:--|

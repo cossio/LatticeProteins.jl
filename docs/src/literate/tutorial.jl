@@ -14,7 +14,7 @@
 # explicitly. (Alternatively, everything is reachable through the `LatticeProteins.`
 # prefix.)
 
-using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts, AMINO_ACIDS,
+using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts,
     metropolis!, random_msa, contact_map, N_STRUCTURES, STRUCTURE_A, STRUCTURE_B
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
@@ -35,13 +35,10 @@ contact_map(STRUCTURE_A)
 
 # ## Encoding sequences
 #
-# Sequences are written as strings over the [`AMINO_ACIDS`](@ref) alphabet (20 amino
-# acids plus a gap character):
-
-AMINO_ACIDS
-
-# Most numerical routines work with *integer-coded* (Potts) sequences, where each
-# amino acid is replaced by its index in the alphabet. Use [`potts`](@ref) to convert:
+# Sequences are written as strings of amino acids, in one-letter code. Most numerical
+# routines work with *integer-coded* (Potts) sequences, where each amino acid is replaced
+# by its index in the alphabet `"CMFILVWYAGTSNQDEHRKP-"` (20 amino acids plus a gap
+# character). Use [`potts`](@ref) to convert:
 
 seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 

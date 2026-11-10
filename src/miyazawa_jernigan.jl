@@ -5,8 +5,8 @@ Base.include_dependency(MJ_PATH)
     MJ
 
 The 20×20 Miyazawa-Jernigan contact energy matrix (a `Matrix{Float64}`). Element `(a, b)`
-is the interaction energy between amino acids `a` and `b`, indexed in the order of
-[`AMINO_ACIDS`](@ref) (its first 20 characters, that is, without the gap).
+is the interaction energy between amino acids `a` and `b`, indexed as in integer-coded
+sequences (see [`potts`](@ref)): the amino acids are in the order `"CMFILVWYAGTSNQDEHRKP"`.
 """
 const MJ = readdlm(MJ_PATH, Float64)
 

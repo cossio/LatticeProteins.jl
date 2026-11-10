@@ -3,7 +3,8 @@
 
 Amino acid alphabet string used for encoding: `"CMFILVWYAGTSNQDEHRKP-"` (20 amino acids
 plus a gap character). This ordering follows the convention used in the lattice proteins
-literature.
+literature. Internal: [`potts`](@ref) and [`aaseq`](@ref) convert between amino acids and
+their indices in this alphabet.
 """
 const AMINO_ACIDS = "CMFILVWYAGTSNQDEHRKP-"
 
@@ -11,8 +12,9 @@ const AMINO_ACIDS = "CMFILVWYAGTSNQDEHRKP-"
     onehot(seq::AbstractString)
 
 One-hot encode an amino acid sequence string. Returns a `BitMatrix` of size `(21, L)`,
-where `L` is the length of `seq`. Each column is a one-hot vector over the
-[`AMINO_ACIDS`](@ref) alphabet.
+where `L` is the length of `seq`. Each column is a one-hot vector over the alphabet
+`"CMFILVWYAGTSNQDEHRKP-"` (20 amino acids and a gap): row `a` stands for its `a`-th
+character.
 
     onehot(seqs::AbstractVector{<:AbstractString})
 
@@ -44,7 +46,7 @@ onehot(A::Union{AbstractVector{<:Integer}, AbstractMatrix{<:Integer}}) = reshape
     aaseq(X::Union{BitMatrix, BitArray{3}})
 
 Convert a one-hot encoded representation back to amino acid sequence string(s).
-`X` must have 21 rows (one per amino acid in [`AMINO_ACIDS`](@ref)).
+`X` must have 21 rows, one per character of the alphabet `"CMFILVWYAGTSNQDEHRKP-"`.
 
     aaseq(P::AbstractVector{<:Integer})
 
@@ -72,9 +74,10 @@ taking the `argmax` along the first dimension.
 
     potts(s::Union{AbstractString, AbstractVector{<:AbstractString}})
 
-Convert amino acid string(s) to integer-coded (Potts) representation, using the
-[`AMINO_ACIDS`](@ref) alphabet ordering. A vector of strings (all of the same length) gives
-a matrix with one sequence per column. Throws an `ArgumentError` for characters that are
+Convert amino acid string(s) to integer-coded (Potts) representation: each character is
+replaced by its index in the alphabet `"CMFILVWYAGTSNQDEHRKP-"` (20 amino acids and a gap),
+so `potts("CM-") == [1, 2, 21]`. A vector of strings (all of the same length) gives a
+matrix with one sequence per column. Throws an `ArgumentError` for characters that are
 not in the alphabet.
 """
 potts(X::BitMatrix) = vec(Int.(first.(Tuple.(argmax(X; dims = 1)))))

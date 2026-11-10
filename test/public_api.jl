@@ -5,7 +5,7 @@ import LatticeProteins
     # The public API is the model with all compact structures.
     api = Set(
         [
-            :AMINO_ACIDS, :L, :potts, :aaseq, :onehot,
+            :L, :potts, :aaseq, :onehot,
             :N_STRUCTURES, :contact_map, :STRUCTURE_A, :STRUCTURE_B, :STRUCTURE_C, :STRUCTURE_D,
             :MJ, :energy, :pnat, :log_pnat,
             :metropolis!, :random_msa, :parallel_tempering,
@@ -19,7 +19,7 @@ import LatticeProteins
     # internal.
     internal = [
         :StructureSet, :STRUCTURES, :shakhnovich_structures, :structure_index, :energies,
-        :N_CONTACTS, :Hugo_MSA, :Hugo_MSA_pnat, :Hugo_MSA_path,
+        :N_CONTACTS, :AMINO_ACIDS, :Hugo_MSA, :Hugo_MSA_pnat, :Hugo_MSA_path,
     ]
     @test all(name -> isdefined(LatticeProteins, name) && !Base.ispublic(LatticeProteins, name), internal)
     @test !isdefined(LatticeProteins, :enumerate_structures)

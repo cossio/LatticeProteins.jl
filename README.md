@@ -73,9 +73,8 @@ A structure is referred to by its index, from 1 to `N_STRUCTURES`.
 | Function | Description |
 |----------|-------------|
 | `onehot(seq)` | One-hot encode amino acid sequence(s) |
-| `potts(seq)` | Convert to integer-coded (Potts) representation |
+| `potts(seq)` | Convert to integer-coded (Potts) representation: indices in the alphabet `"CMFILVWYAGTSNQDEHRKP-"` |
 | `aaseq(X)` | Convert from one-hot or integer coding back to amino acid string(s) |
-| `AMINO_ACIDS` | Amino acid alphabet: `"CMFILVWYAGTSNQDEHRKP-"` |
 | `L` | Sequence length (27) |
 
 ### Sampling

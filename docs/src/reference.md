@@ -17,12 +17,11 @@ explicitly (e.g. `using LatticeProteins: pnat`).
 
 ### Sequences
 
-Sequences are strings over the alphabet [`AMINO_ACIDS`](@ref), integer-coded vectors
-([`potts`](@ref)) or one-hot encoded arrays ([`onehot`](@ref)). Energies and samplers
-work with integer-coded sequences.
+Sequences are strings of amino acids, integer-coded vectors ([`potts`](@ref)) or one-hot
+encoded arrays ([`onehot`](@ref)). Energies and samplers work with integer-coded
+sequences.
 
 ```@docs
-AMINO_ACIDS
 L
 potts
 aaseq
@@ -81,6 +80,12 @@ shakhnovich_structures
 structure_index
 energies
 N_CONTACTS
+```
+
+### Alphabet
+
+```@docs
+AMINO_ACIDS
 ```
 
 ### Reference alignments of Jacquin et al. (2016)

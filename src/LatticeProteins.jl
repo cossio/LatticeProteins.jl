@@ -25,7 +25,7 @@ using DelimitedFiles: readdlm
 using Random: AbstractRNG, Xoshiro, default_rng, randexp
 
 # Sequences
-public AMINO_ACIDS, L, potts, aaseq, onehot
+public L, potts, aaseq, onehot
 # Structures
 public N_STRUCTURES, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 # Energy and folding probability

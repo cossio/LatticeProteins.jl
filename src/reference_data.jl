@@ -2,21 +2,17 @@
     Hugo_MSA_path(which::Symbol)
 
 Return the file path to one of the reference MSA datasets from Jacquin et al. (2016).
+Internal, like the other `Hugo_MSA` functions: these alignments were sampled against the
+subset of 10,000 structures ([`shakhnovich_structures`](@ref)), not the full model.
 `which` must be one of `:A`, `:B`, `:C`, or `:D`, corresponding to the four reference
-structures ([`CONTACT_MAP_A`](@ref), etc.).
+structures ([`STRUCTURE_A`](@ref), etc.). Each line of the file holds the inverse
+temperature used for sampling, the folding probability and the sequence.
+
+The files are downloaded the first time one of them is requested.
 """
 function Hugo_MSA_path(which::Symbol)
-    if which == :A
-        return joinpath(artifact"MSAs_Hugo_PlosCb", "align_A.msa")
-    elseif which == :B
-        return joinpath(artifact"MSAs_Hugo_PlosCb", "align_B.msa")
-    elseif which == :C
-        return joinpath(artifact"MSAs_Hugo_PlosCb", "align_C.msa")
-    elseif which == :D
-        return joinpath(artifact"MSAs_Hugo_PlosCb", "align_D.msa")
-    else
-        throw(ArgumentError("Unknown MSA $which; must be one of :A, :B, :C, :D"))
-    end
+    which in (:A, :B, :C, :D) || throw(ArgumentError("Unknown MSA $which; must be one of :A, :B, :C, :D"))
+    return joinpath(artifact"MSAs_Hugo_PlosCb", "align_$which.msa")
 end
 
 """
@@ -38,8 +34,8 @@ end
 Load the native fold probabilities (pnat values) for the reference MSA dataset
 from Jacquin et al. (2016). `which` must be one of `:A`, `:B`, `:C`, or `:D`.
 Returns a `Vector{Float64}`. These values were computed against the subset of 10,000
-structures, i.e. `pnat(cm, seq; structures = SHAKHNOVICH_STRUCTURES)` with `cm` the index of
-the structure in [`SHAKHNOVICH_STRUCTURES`](@ref).
+structures, i.e. `pnat(s, seq; structures = shakhnovich_structures())` with `s` the index
+of the structure in [`shakhnovich_structures`](@ref).
 
 See also [`Hugo_MSA`](@ref).
 """

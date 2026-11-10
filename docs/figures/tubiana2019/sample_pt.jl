@@ -1,10 +1,10 @@
 # Reproduce the full-structure alignment with independent replica-exchange ladders.
-# Usage: julia -t 4 --project=. sample_pt.jl OUT [RUNS NSEQS BETA BURNIN THIN LOCAL_STEPS CACHE]
+# Usage: julia -t 4 --project=. sample_pt.jl OUT [RUNS NSEQS BETA BURNIN THIN LOCAL_STEPS]
 # Defaults: 4 ladders, 9000 saved sequences each, beta_max=1000, 4000 burn-in
 # rounds, saving every 2 rounds, 5 mutations per replica per round.
 # Keep the unfiltered trajectories: convergence must be checked before filtering.
-using LatticeProteins: LatticeProteins, parallel_tempering, STRUCTURES, CONTACT_MAP_A,
-    L, aaseq, log_pnat, Hugo_MSA_path
+using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, aaseq,
+    logpnat, Hugo_MSA_path
 using Random: Xoshiro
 using DelimitedFiles: writedlm
 using Statistics: mean
@@ -28,8 +28,6 @@ function main(args)
     burnin = length(args) >= 5 ? parse(Int, args[5]) : 4000
     thin = length(args) >= 6 ? parse(Int, args[6]) : 2
     local_steps = length(args) >= 7 ? parse(Int, args[7]) : 5
-    energy_cache = length(args) >= 8 ? Symbol(args[8]) : :auto
-    energy_cache in (:auto, :float, :integer) || error("CACHE must be auto, float, or integer")
     runs >= 4 && nseqs >= 4 && beta > 0.1 && burnin >= 0 && thin > 0 && local_steps > 0 ||
         error("need >=4 independent runs, >=4 samples, beta > 0.1, and valid run lengths")
     betas = [0.0; exp.(range(log(0.1), log(beta); length = 25))]
@@ -37,11 +35,10 @@ function main(args)
     seeds = collect(2026103001:(2026103000 + runs))
     mkpath(out)
     parameters = Dict(
-        "structure_set" => "all", "target" => CONTACT_MAP_A,
-        "nstructures" => size(STRUCTURES, 2), "betas" => betas, "runs" => runs,
+        "structure_set" => "all", "target" => STRUCTURE_A,
+        "nstructures" => length(STRUCTURES), "betas" => betas, "runs" => runs,
         "samples_per_run" => nseqs, "burnin_rounds" => burnin, "thin_rounds" => thin,
         "local_steps" => local_steps, "seeds" => seeds, "julia_version" => string(VERSION),
-        "energy_cache_requested" => string(energy_cache),
         "rng_mode" => "shared", "threaded_replicas" => false,
         "reference_alignment" => Hugo_MSA_path(:A),
         "script_sha256" => bytes2hex(sha256(read(@__FILE__))),
@@ -52,23 +49,18 @@ function main(args)
     open(joinpath(out, "parameters.toml"), "w") do io
         TOML.print(io, parameters)
     end
-    # Initialize the shared, immutable contact index before starting threads.
-    LatticeProteins.site_contacts(STRUCTURES)
     println(
         "$(runs) ladders, $(length(betas)) replicas each, beta_max=$beta, " *
             "$((burnin + nseqs * thin) * local_steps) proposals per replica"
     )
     flush(stdout)
     Threads.@threads for run in 1:runs
-        elapsed = @elapsed r = parallel_tempering(
-            CONTACT_MAP_A; betas, burnin,
-            nseqs, thin, local_steps, energy_cache, structures = STRUCTURES, rng = Xoshiro(seeds[run]),
-            threaded = false, rng_mode = :shared
-        )
-        p = exp.(r.log_pnat[end, :])
-        # Independent, direct energy sums verify the cached probabilities.
+        method = ParallelTempering(; betas, burnin, thin, local_steps, threaded = false, rng_mode = :shared)
+        elapsed = @elapsed r = sample_msa(STRUCTURE_A, method; nseqs, rng = Xoshiro(seeds[run]))
+        p = exp.(r.logpnat[end, :])
+        # Recompute sampled probabilities from the sequences alone.
         checks = unique(round.(Int, range(1, nseqs; length = min(nseqs, 50))))
-        errors = [abs(p[i] - exp(log_pnat(CONTACT_MAP_A, r.samples[:, i]))) for i in checks]
+        errors = [abs(p[i] - exp(logpnat(STRUCTURE_A, r.samples[:, i]))) for i in checks]
         maximum(errors) < 1.0e-10 || error("cached probability check failed in run $run")
         write_csv(
             joinpath(out, "run_$(run)_cold.csv"),
@@ -79,7 +71,7 @@ function main(args)
             joinpath(out, "run_$(run)_trace.csv"),
             ["sample", "beta", "pnat", "replica_id"],
             [
-                (i, betas[j], exp(r.log_pnat[j, i]), r.replica_ids[j, i])
+                (i, betas[j], exp(r.logpnat[j, i]), r.replica_ids[j, i])
                     for i in 1:nseqs for j in eachindex(betas)
             ]
         )
@@ -96,7 +88,7 @@ function main(args)
         )
         write_csv(
             joinpath(out, "run_$(run)_final.csv"), ["beta", "pnat", "sequence"],
-            [(betas[j], exp(r.final_log_pnat[j]), aaseq(r.final_seqs[:, j])) for j in eachindex(betas)]
+            [(betas[j], exp(r.final_logpnat[j]), aaseq(r.final_seqs[:, j])) for j in eachindex(betas)]
         )
         open(joinpath(out, "run_$(run).msa"), "w") do io
             for i in 1:nseqs
@@ -105,7 +97,6 @@ function main(args)
         end
         summary = Dict(
             "run" => run, "seed" => seeds[run], "seconds" => elapsed,
-            "energy_cache" => string(r.energy_cache),
             "mean_pnat" => mean(p), "minimum_pnat" => minimum(p), "maximum_pnat" => maximum(p),
             "fraction_above_099" => mean(p .> 0.99), "fraction_above_0995" => mean(p .> 0.995),
             "first_half_mean" => mean(p[1:(nseqs ÷ 2)]), "last_half_mean" => mean(p[(nseqs ÷ 2 + 1):end]),

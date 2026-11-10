@@ -3,15 +3,14 @@
 # Set TUBIANA_PYTHON to the Python executable with requirements.txt installed.
 # Checkpoints preserve the RNG stream and temperature states. Re-running the same
 # command resumes after the last committed chunk, without dropping saved draws.
-using LatticeProteins: LatticeProteins, parallel_tempering, STRUCTURES, CONTACT_MAP_A,
-    potts, aaseq, log_pnat
+using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, potts, aaseq,
+    logpnat
 using Random: Xoshiro
 using DelimitedFiles: readdlm, writedlm
 using Serialization: serialize, deserialize
 using TOML
 using SHA: sha256
 using Statistics: mean
-const LP = LatticeProteins
 
 function csv(path, header, rows)
     return open(path, "w") do io
@@ -48,11 +47,12 @@ function initial_state(source, run, parameters)
 end
 function advance!(state, parameters, out, run, batch_samples)
     betas = parameters["betas"]
-    elapsed = @elapsed result = parallel_tempering(
-        CONTACT_MAP_A; betas,
-        burnin = 0, nseqs = batch_samples, thin = parameters["thin_rounds"],
-        local_steps = parameters["local_steps"], rng = state[:rng], initial_seqs = state[:seqs],
-        structures = STRUCTURES, energy_cache = :integer, threaded = false, rng_mode = :shared
+    method = ParallelTempering(;
+        betas, burnin = 0, thin = parameters["thin_rounds"],
+        local_steps = parameters["local_steps"], threaded = false, rng_mode = :shared
+    )
+    elapsed = @elapsed result = sample_msa(
+        STRUCTURE_A, method; nseqs = batch_samples, rng = state[:rng], initial_seqs = state[:seqs]
     )
     global_ids = state[:ids][result.replica_ids]
     # With an even ladder and thin=2, both endpoint edges are attempted on odd
@@ -65,9 +65,9 @@ function advance!(state, parameters, out, run, batch_samples)
         state[:stages][cold] == 1 && (state[:stages][cold] = 2)
     end
     offset = parameters["initial_samples_per_run"] + state[:added_samples]
-    p = exp.(result.log_pnat[end, :])
+    p = exp.(result.logpnat[end, :])
     indices = unique(round.(Int, range(1, batch_samples; length = min(50, batch_samples))))
-    errors = [abs(p[i] - exp(log_pnat(CONTACT_MAP_A, result.samples[:, i]))) for i in indices]
+    errors = [abs(p[i] - exp(logpnat(STRUCTURE_A, result.samples[:, i]))) for i in indices]
     maximum(errors) < 1.0e-10 || error("direct probability check failed")
     batch = state[:batch] + 1
     prefix = joinpath(out, "chunks", "run_$(run)_batch_$(batch)")
@@ -78,7 +78,7 @@ function advance!(state, parameters, out, run, batch_samples)
     csv(
         prefix * "_trace.csv", ["sample", "beta", "pnat", "replica_id"],
         [
-            (offset + i, betas[j], exp(result.log_pnat[j, i]), global_ids[j, i])
+            (offset + i, betas[j], exp(result.logpnat[j, i]), global_ids[j, i])
                 for i in 1:batch_samples for j in eachindex(betas)
         ]
     )
@@ -133,7 +133,7 @@ function aggregate(source, out, parameters, states)
         csv(
             joinpath(out, "run_$(run)_final.csv"), ["beta", "pnat", "sequence"],
             [
-                (parameters["betas"][j], exp(log_pnat(CONTACT_MAP_A, state[:seqs][:, j])), aaseq(state[:seqs][:, j]))
+                (parameters["betas"][j], exp(logpnat(STRUCTURE_A, state[:seqs][:, j])), aaseq(state[:seqs][:, j]))
                     for j in eachindex(parameters["betas"])
             ]
         )
@@ -156,9 +156,10 @@ function main(args)
     check_every = length(args) >= 4 ? parse(Int, args[4]) : 5
     batch_samples > 0 && check_every > 0 || error("invalid batch/check interval")
     parameters = TOML.parsefile(joinpath(source, "parameters.toml"))
+    # thin=2 also makes every chunk end after an even number of rounds, which keeps the
+    # alternation of the swap edges of an uninterrupted run.
     parameters["thin_rounds"] == 2 && iseven(length(parameters["betas"])) ||
         error("endpoint accounting requires an even ladder and thin=2")
-    batch_samples * parameters["thin_rounds"] % 100 == 0 || error("chunks must end on 100-round boundaries")
     root = normpath(joinpath(@__DIR__, "../../.."))
     sampler_hash = bytes2hex(sha256(read(joinpath(root, "src/parallel_tempering.jl"))))
     if isdir(out)
@@ -175,7 +176,6 @@ function main(args)
         parameters["source_directory"] = source
         parameters["continuation_sampler_sha256"] = sampler_hash
         parameters["continuation_script_sha256"] = bytes2hex(sha256(read(@__FILE__)))
-        parameters["continuation_energy_cache"] = "integer"
         parameters["continuation_rng_mode"] = "shared"
         parameters["continuation_threaded_replicas"] = false
         parameters["continuation_seeds"] = [state[:seed] for state in states]
@@ -185,7 +185,6 @@ function main(args)
         end
         open(io -> TOML.print(io, parameters), joinpath(out, "parameters.toml"), "w")
     end
-    LP.site_contacts(STRUCTURES)
     python = get(ENV, "TUBIANA_PYTHON", "python")
     while true
         batch = minimum(state[:batch] for state in states) + 1

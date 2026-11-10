@@ -31,7 +31,7 @@ export enumerate_structures, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C,
 # Energy and folding probability
 export MJ, energy, pnat, log_pnat
 # Sampling
-export metropolis!, sample_msa, parallel_tempering
+export sample_msa, Metropolis, ParallelTempering, metropolis!
 
 """
     L
@@ -52,6 +52,7 @@ include("miyazawa_jernigan.jl")
 include("lattice.jl")
 include("structures.jl")
 include("energy.jl")
+include("sample_msa.jl")
 include("metropolis.jl")
 include("parallel_tempering.jl")
 include("reference_data.jl")

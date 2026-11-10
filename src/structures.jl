@@ -45,7 +45,7 @@ residue positions (in `1:27`) in contact. All structures must have the same numb
 contacts.
 
 The functions that take a structure index ([`contact_map`](@ref), [`energy`](@ref),
-[`pnat`](@ref), [`metropolis!`](@ref), [`parallel_tempering`](@ref), ...) accept the set of
+[`pnat`](@ref), [`metropolis!`](@ref), [`sample_msa`](@ref), ...) accept the set of
 competing structures as the keyword argument `structures`, and the index then refers to
 that set. The package has two sets:
 

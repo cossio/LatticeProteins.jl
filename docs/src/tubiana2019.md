@@ -56,7 +56,7 @@ with folding probability ``P_\text{nat}(S_A \mid v) > 0.995``. Following Jacquin
 
 The reference-subset reproduction below uses [`metropolis!`](@ref) at ``\beta = 1000``,
 keeping one sequence every 1,000 steps after a burn-in of 10,000 steps, and filtering at
-``P_\text{nat} > 0.995``. The full-structure experiment uses [`parallel_tempering`](@ref)
+``P_\text{nat} > 0.995``. The full-structure experiment uses [`ParallelTempering`](@ref)
 with a cold replica at the same ``\beta = 1000`` and filters at ``P_\text{nat} > 0.99``.
 Before filtering, both samplers target a sequence distribution proportional to
 ``P_\text{nat}^{1000}`` for their respective structure sets. Replica exchange changes
@@ -96,7 +96,7 @@ basins the 4 chains fell into rather than by the model.
 
 ## Version 2: against all 103,346 compact structures
 
-This version uses [`parallel_tempering`](@ref) against all compact structures, with four independent
+This version uses [`ParallelTempering`](@ref) against all compact structures, with four independent
 ladders and a cold replica at ``\beta = 1000``. Each ladder has 26 replicas: ``\beta=0``
 and 25 logarithmically spaced values from 0.1 to 1000. The physical folding temperature
 remains 1. Each round performs five single-residue mutation proposals per replica,

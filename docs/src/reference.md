@@ -50,9 +50,10 @@ log_pnat
 ### Sampling
 
 ```@docs
-metropolis!
 sample_msa
-parallel_tempering
+Metropolis
+ParallelTempering
+metropolis!
 ```
 
 ## Internals

@@ -56,12 +56,11 @@ function record_endpoints!(stages, trips, ids)
 end
 
 """
-    parallel_tempering(s; betas, nseqs=100, burnin=1000, thin=10, local_steps=10,
-                       initial_seqs=nothing, rng=default_rng(), threaded=true,
-                       rng_mode=:per_temperature)
+    ParallelTempering(; betas, burnin = 1000, thin = 10, local_steps = 10,
+                      threaded = true, rng_mode = :per_temperature)
 
-Sample sequences with replica exchange, targeting `pnat(s, seq)^betas[end]` for the
-structure of index `s`. `betas` must contain at least two finite, nonnegative, strictly
+Sampling method of [`sample_msa`](@ref): replica exchange, targeting
+`pnat(s, seq)^betas[end]`. `betas` must contain at least two finite, nonnegative, strictly
 increasing inverse selection temperatures (hot to cold). The physical folding temperature
 stays at 1, and all 103,346 compact structures compete, just as in [`log_pnat`](@ref).
 
@@ -70,11 +69,16 @@ One **round** performs `local_steps` Metropolis steps per replica (the moves of
 two replicas the only edge is attempted every round. A swap is accepted with
 `min(1, exp((betas[i]-betas[j]) * (E[i]-E[j])))`, where `E = -log_pnat`.
 
-Discard `burnin` rounds, then save the coldest sequence after every `thin` rounds
-until `nseqs` samples have been saved. Thus each replica receives
-`(burnin + nseqs * thin) * local_steps` mutation proposals. `initial_seqs`, when
-provided, is a `(27, length(betas))` integer matrix, ordered hot to cold; it is
-copied. Otherwise each replica starts from an independent uniform sequence.
+`burnin` rounds are discarded, then the coldest sequence is saved after every `thin`
+rounds until `nseqs` samples have been saved. Thus each replica receives
+`(burnin + nseqs * thin) * local_steps` mutation proposals.
+
+    sample_msa(s, ParallelTempering(; ...); nseqs = 100, rng = default_rng(), initial_seqs = nothing)
+
+`initial_seqs`, when provided, is a `(27, length(betas))` integer matrix of starting
+sequences, ordered hot to cold; it is copied. Otherwise each replica starts from an
+independent uniform sequence.
+
 Use an explicit RNG for reproducible runs. By default, each temperature slot uses
 its own `Xoshiro` stream seeded from `rng`; swaps use `rng` serially. For fixed
 arguments and Julia version, results do not depend on thread count or scheduling.
@@ -86,11 +90,12 @@ results.
 
 `rng_mode=:shared` with `threaded=false` uses `rng` for both local updates and swaps,
 without creating temperature streams. This makes a run resumable: a call with
-`burnin=0` that passes the same RNG and the `final_seqs` of the previous call continues
-its trajectory exactly, provided the previous call ended on an even number of rounds
-(which preserves the alternation of the swap edges). It is also the RNG protocol of
-v2.1.0 and of the saved Tubiana PT alignment. The default `:per_temperature` mode
-creates fresh local streams on each call and is not a checkpoint interface.
+`burnin=0` that passes the same RNG and the `final_seqs` of the previous call as
+`initial_seqs` continues its trajectory exactly, provided the previous call ended on an
+even number of rounds (which preserves the alternation of the swap edges). It is also
+the RNG protocol of v2.1.0 and of the saved Tubiana PT alignment. The default
+`:per_temperature` mode creates fresh local streams on each call and is not a checkpoint
+interface.
 
 Returns a named tuple with:
 - `samples`: coldest-replica MSA, size `(27, nseqs)`. Samples can be correlated.
@@ -108,29 +113,48 @@ Inspect swap acceptance, round trips, and agreement between independent runs.
 High folding probabilities or accepted swaps alone do not establish equilibrium.
 Tune the ladder in pilot runs, then hold it fixed for production sampling.
 
-See also [`metropolis!`](@ref), [`sample_msa`](@ref).
+```julia
+betas = [0.0; exp.(range(log(0.1), log(1000.0); length = 25))]
+result = sample_msa(STRUCTURE_A, ParallelTempering(; betas); nseqs = 500)
+result.samples                  # the sequences at betas[end]
+result.diagnostics.round_trips  # hot → cold → hot, per replica
+```
 """
-function parallel_tempering(
-        s::Integer; betas::AbstractVector{<:Real}, nseqs::Integer = 100,
-        burnin::Integer = 1000, thin::Integer = 10, local_steps::Integer = 10,
-        initial_seqs::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
-        rng::AbstractRNG = default_rng(), structures::StructureSet = STRUCTURES,
-        threaded::Bool = true, rng_mode::Symbol = :per_temperature
-    )
+struct ParallelTempering
+    betas::Vector{Float64}
+    burnin::Int
+    thin::Int
+    local_steps::Int
+    threaded::Bool
+    rng_mode::Symbol
+    function ParallelTempering(;
+            betas::AbstractVector{<:Real}, burnin::Integer = 1000, thin::Integer = 10,
+            local_steps::Integer = 10, threaded::Bool = true,
+            rng_mode::Symbol = :per_temperature
+        )
+        burnin >= 0 || throw(ArgumentError("burnin must be nonnegative"))
+        thin > 0 || throw(ArgumentError("thin must be positive"))
+        local_steps > 0 || throw(ArgumentError("local_steps must be positive"))
+        rng_mode in (:per_temperature, :shared) || throw(ArgumentError("invalid rng_mode"))
+        rng_mode == :shared && threaded &&
+            throw(ArgumentError("rng_mode=:shared requires threaded=false"))
+        length(betas) >= 2 || throw(ArgumentError("at least two temperatures are required"))
+        all(b -> isfinite(b) && b >= 0, betas) && all(diff(betas) .> 0) ||
+            throw(ArgumentError("betas must be finite, nonnegative, and strictly increasing"))
+        return new(Float64.(betas), burnin, thin, local_steps, threaded, rng_mode)
+    end
+end
 
+function sample_msa(
+        s::Integer, method::ParallelTempering; nseqs::Integer = 100,
+        rng::AbstractRNG = default_rng(),
+        initial_seqs::Union{Nothing, AbstractMatrix{<:Integer}} = nothing,
+        structures::StructureSet = STRUCTURES
+    )
+    (; betas, burnin, thin, local_steps, threaded, rng_mode) = method
     check_structure(structures, s)
     nseqs >= 0 || throw(ArgumentError("nseqs must be nonnegative"))
-    burnin >= 0 || throw(ArgumentError("burnin must be nonnegative"))
-    thin > 0 || throw(ArgumentError("thin must be positive"))
-    local_steps > 0 || throw(ArgumentError("local_steps must be positive"))
-    rng_mode in (:per_temperature, :shared) || throw(ArgumentError("invalid rng_mode"))
-    rng_mode == :shared && threaded &&
-        throw(ArgumentError("rng_mode=:shared requires threaded=false"))
-    betas = Float64.(betas)
     n = length(betas)
-    n >= 2 || throw(ArgumentError("at least two temperatures are required"))
-    all(b -> isfinite(b) && b >= 0, betas) && all(diff(betas) .> 0) ||
-        throw(ArgumentError("betas must be finite, nonnegative, and strictly increasing"))
     if initial_seqs === nothing
         initial_seqs = rand(rng, 1:20, L, n)
     else
@@ -175,7 +199,7 @@ function parallel_tempering(
         end
     end
     return (;
-        samples, betas, rng_mode, log_pnat = trace, replica_ids,
+        samples, betas = copy(betas), rng_mode, log_pnat = trace, replica_ids,
         final_seqs = stack(chain.seq for chain in chains),
         final_log_pnat = [-chain.loss for chain in chains], burnin_diagnostics, diagnostics,
     )

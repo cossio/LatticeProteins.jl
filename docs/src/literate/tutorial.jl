@@ -72,21 +72,31 @@ log_pnat(STRUCTURE_A, seq)
 
 # ## Sampling sequences that fold
 #
-# We can search for sequences that fold into a target structure using Metropolis
-# Monte Carlo. [`sample_msa`](@ref) starts from random sequences and evolves each one
-# at inverse temperature `β`; a large `β` strongly favours sequences with high
-# folding probability for the target structure.
+# We can search for sequences that fold into a target structure using Monte Carlo.
+# [`sample_msa`](@ref) samples an alignment with the method it is given. The simplest,
+# [`Metropolis`](@ref), starts from random sequences and evolves each one at inverse
+# temperature `β`; a large `β` strongly favours sequences with high folding probability
+# for the target structure.
 
-msa = sample_msa(STRUCTURE_A; nseqs = 20, β = 100, nsteps = 1000)
+result = sample_msa(STRUCTURE_A, Metropolis(β = 100, nsteps = 1000); nseqs = 20)
+msa = result.samples
 size(msa)
 
-# Each column of the returned matrix is an integer-coded sequence. The sampled
-# sequences fold into structure A with high probability:
+# Each column of the alignment is an integer-coded sequence. The sampled sequences fold
+# into structure A with high probability:
 
 using Statistics: mean
 mean(pnat(STRUCTURE_A, col) for col in eachcol(msa))
 
-# [`metropolis!`](@ref) exposes the same sampler for a single sequence, mutating it
+# For strong selection, where a single chain mixes slowly, the method
+# [`ParallelTempering`](@ref) runs replicas over a ladder of inverse temperatures, and
+# reports how well they exchange:
+
+ladder = ParallelTempering(betas = [0.0, 1.0, 10.0, 100.0], burnin = 200, thin = 5)
+result = sample_msa(STRUCTURE_A, ladder; nseqs = 20)
+result.diagnostics.swap_accepts ./ result.diagnostics.swap_attempts
+
+# [`metropolis!`](@ref) exposes the Metropolis sampler for a single sequence, mutating it
 # in place:
 
 s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
@@ -94,8 +104,7 @@ metropolis!(s, STRUCTURE_A; β = 100, nsteps = 200)
 pnat(STRUCTURE_A, s)
 
 # Both functions take a random number generator as the keyword argument `rng`, for
-# reproducible runs. For strong selection, where a single chain mixes slowly, see
-# [`parallel_tempering`](@ref).
+# reproducible runs.
 
 # ## Internals: the model of Jacquin et al. (2016)
 #
@@ -129,7 +138,7 @@ pnat(STRUCTURE_A, seq)
 
 # Sampling works the same way:
 
-msa_ref = sample_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = S10)
+msa_ref = sample_msa(a, Metropolis(β = 100, nsteps = 200); nseqs = 5, structures = S10).samples
 mean(pnat(a, col; structures = S10) for col in eachcol(msa_ref))
 
 # The package also provides the reference multiple sequence alignments (MSAs) of Jacquin et

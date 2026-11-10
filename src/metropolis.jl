@@ -80,7 +80,7 @@ short ones.
 - `nsteps`: number of Monte Carlo steps to perform.
 - `rng`: random number generator.
 
-See also [`sample_msa`](@ref), [`parallel_tempering`](@ref).
+See also [`sample_msa`](@ref).
 """
 function metropolis!(
         seq::AbstractVector{<:Integer}, s::Integer; β::Real = 1, nsteps::Integer = 1,
@@ -96,30 +96,44 @@ function metropolis!(
 end
 
 """
-    sample_msa(s; nseqs = 1, β = 1, nsteps = 1000, rng = default_rng())
+    Metropolis(; β, nsteps = 1000)
 
-Sample a multiple sequence alignment (MSA) of `nseqs` sequences that fold into structure
-`s`, using Metropolis Monte Carlo sampling.
-
-Each sequence is initialized randomly and then evolved independently for `nsteps`
-Metropolis steps at inverse temperature `β` (see [`metropolis!`](@ref)). Returns a
-`Matrix{Int}` of size `(27, nseqs)`, where each column is an integer-coded amino acid
-sequence.
+Sampling method of [`sample_msa`](@ref): independent Metropolis chains. Each sequence of
+the alignment is the end point of its own chain, which starts from a uniformly random
+sequence and makes `nsteps` Metropolis steps (see [`metropolis!`](@ref)) at inverse
+temperature `β`.
 
 The sequences are independent, but each is a sample of the distribution `pnat(s, seq)^β`
 only if `nsteps` is long enough for a chain to equilibrate. At strong selection (large
-`β`) it is not, in practice: use [`parallel_tempering`](@ref).
+`β`) it is not, in practice: use [`ParallelTempering`](@ref).
 
-See also [`metropolis!`](@ref), [`parallel_tempering`](@ref).
+`sample_msa(s, Metropolis(; β, nsteps); nseqs, rng)` returns a named tuple with:
+- `samples`: the alignment, of size `(27, nseqs)`.
+- `log_pnat`: the log-probability of folding of each of its sequences.
 """
-function sample_msa(
-        s::Integer; nseqs::Integer = 1, β::Real = 1, nsteps::Integer = 1000,
-        structures::StructureSet = STRUCTURES, rng::AbstractRNG = default_rng()
-    )
-    nseqs ≥ 0 || throw(ArgumentError("nseqs must be nonnegative"))
-    seqs = rand(rng, 1:20, L, nseqs)
-    for n in 1:nseqs
-        metropolis!(view(seqs, :, n), s; β, nsteps, structures, rng)
+struct Metropolis
+    β::Float64
+    nsteps::Int
+    function Metropolis(; β::Real, nsteps::Integer = 1000)
+        nsteps ≥ 0 || throw(ArgumentError("nsteps must be nonnegative"))
+        return new(β, nsteps)
     end
-    return seqs
+end
+
+function sample_msa(
+        s::Integer, method::Metropolis; nseqs::Integer = 100,
+        rng::AbstractRNG = default_rng(), structures::StructureSet = STRUCTURES
+    )
+    check_structure(structures, s)
+    nseqs ≥ 0 || throw(ArgumentError("nseqs must be nonnegative"))
+    samples = rand(rng, 1:20, L, nseqs)
+    log_pnat = Vector{Float64}(undef, nseqs)
+    sites = site_contacts(structures)
+    for n in 1:nseqs
+        chain = Chain(view(samples, :, n), s, structures)
+        local_steps!(rng, chain, s, method.β, method.nsteps, sites, structures.boltzmann)
+        samples[:, n] .= chain.seq
+        log_pnat[n] = -chain.loss
+    end
+    return (; samples, log_pnat)
 end

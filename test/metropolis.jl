@@ -1,5 +1,5 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: LatticeProteins, sample_msa, metropolis!, pnat, log_pnat, energies,
+using LatticeProteins: LatticeProteins, sample_msa, Metropolis, metropolis!, pnat, log_pnat, energies,
     structure_index, StructureSet, STRUCTURE_A, STRUCTURES, shakhnovich_structures, MJ, L
 using Random: Xoshiro, seed!, randexp
 
@@ -123,12 +123,19 @@ end
 end
 
 @testset "sample_msa" begin
-    msa = sample_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
-    @test msa isa Matrix{Int}
-    @test size(msa) == (L, 5)
-    @test all(1 .≤ msa .≤ 20)
-    @test msa == sample_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
-    @test size(sample_msa(STRUCTURE_A; nseqs = 0)) == (L, 0)
+    method = Metropolis(; β = 1, nsteps = 10)
+    @test method.β === 1.0 && method.nsteps == 10
+    @test Metropolis(; β = 2).nsteps == 1000
+    r = sample_msa(STRUCTURE_A, method; nseqs = 5, rng = Xoshiro(42))
+    @test keys(r) == (:samples, :log_pnat)
+    @test r.samples isa Matrix{Int}
+    @test size(r.samples) == (L, 5)
+    @test all(1 .≤ r.samples .≤ 20)
+    @test r.log_pnat == [log_pnat(STRUCTURE_A, seq) for seq in eachcol(r.samples)]
+    @test r == sample_msa(STRUCTURE_A, method; nseqs = 5, rng = Xoshiro(42))
+    @test size(sample_msa(STRUCTURE_A, method; nseqs = 0).samples) == (L, 0)
+    # the default is 100 sequences, from the default RNG
+    @test size(sample_msa(STRUCTURE_A, Metropolis(; β = 1, nsteps = 1)).samples) == (L, 100)
 
     # independent chains started from random sequences
     rng = Xoshiro(5)
@@ -136,8 +143,12 @@ end
     for n in 1:3
         naive_metropolis!(rng, view(seqs, :, n), A10; β = 10, nsteps = 50, structures = S10)
     end
-    @test sample_msa(A10; nseqs = 3, β = 10, nsteps = 50, structures = S10, rng = Xoshiro(5)) == seqs
+    r = sample_msa(A10, Metropolis(; β = 10, nsteps = 50); nseqs = 3, structures = S10, rng = Xoshiro(5))
+    @test r.samples == seqs
+    @test r.log_pnat == [log_pnat(A10, seq; structures = S10) for seq in eachcol(seqs)]
 
-    @test_throws ArgumentError sample_msa(STRUCTURE_A; nseqs = -1)
-    @test_throws ArgumentError sample_msa(0)
+    @test_throws ArgumentError sample_msa(STRUCTURE_A, method; nseqs = -1)
+    @test_throws ArgumentError sample_msa(0, method)
+    @test_throws ArgumentError Metropolis(; β = 1, nsteps = -1)
+    @test_throws MethodError sample_msa(STRUCTURE_A)
 end

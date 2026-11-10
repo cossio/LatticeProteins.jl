@@ -10,7 +10,7 @@
 # The default is all 103,346 structures; the optional final argument selects the
 # 10,000-structure subset. Target indices are translated to the selected set.
 
-using LatticeProteins: parallel_tempering, metropolis!, pnat, aaseq, structure_index,
+using LatticeProteins: sample_msa, ParallelTempering, metropolis!, pnat, aaseq, structure_index,
     STRUCTURES, shakhnovich_structures, STRUCTURE_A, L
 using Random: Xoshiro
 using DelimitedFiles: writedlm
@@ -63,10 +63,9 @@ function main(args)
         seed = 2000 + run
         if isodd(job)
             # Independent jobs already run in parallel; keep each ladder serial.
-            elapsed = @elapsed r = parallel_tempering(
-                s; betas, burnin,
-                nseqs, thin, local_steps, structures, initial_seqs = initial[run],
-                rng = Xoshiro(seed), threaded = false
+            method = ParallelTempering(; betas, burnin, thin, local_steps, threaded = false)
+            elapsed = @elapsed r = sample_msa(
+                s, method; nseqs, structures, initial_seqs = initial[run], rng = Xoshiro(seed)
             )
             rows = [
                 (

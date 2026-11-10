@@ -33,7 +33,7 @@ p = pnat(STRUCTURE_A, seq)
 E = energy(STRUCTURE_A, seq)
 
 # Generate sequences that fold into structure A via Metropolis sampling
-msa = sample_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
+msa = sample_msa(STRUCTURE_A, Metropolis(β=100, nsteps=1000); nseqs=100).samples
 ```
 
 See the [Tutorial](@ref) for a worked walkthrough and the [Reference](@ref) for the

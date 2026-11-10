@@ -3,8 +3,8 @@
 # Defaults: 4 ladders, 9000 saved sequences each, beta_max=1000, 4000 burn-in
 # rounds, saving every 2 rounds, 5 mutations per replica per round.
 # Keep the unfiltered trajectories: convergence must be checked before filtering.
-using LatticeProteins: parallel_tempering, STRUCTURES, STRUCTURE_A, aaseq, log_pnat,
-    Hugo_MSA_path
+using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, aaseq,
+    log_pnat, Hugo_MSA_path
 using Random: Xoshiro
 using DelimitedFiles: writedlm
 using Statistics: mean
@@ -55,11 +55,8 @@ function main(args)
     )
     flush(stdout)
     Threads.@threads for run in 1:runs
-        elapsed = @elapsed r = parallel_tempering(
-            STRUCTURE_A; betas, burnin,
-            nseqs, thin, local_steps, structures = STRUCTURES, rng = Xoshiro(seeds[run]),
-            threaded = false, rng_mode = :shared
-        )
+        method = ParallelTempering(; betas, burnin, thin, local_steps, threaded = false, rng_mode = :shared)
+        elapsed = @elapsed r = sample_msa(STRUCTURE_A, method; nseqs, rng = Xoshiro(seeds[run]))
         p = exp.(r.log_pnat[end, :])
         # Recompute sampled probabilities from the sequences alone.
         checks = unique(round.(Int, range(1, nseqs; length = min(nseqs, 50))))

@@ -1,11 +1,20 @@
 using Test: @test, @testset, @test_throws
-using Random: Xoshiro
+using Random: Xoshiro, default_rng
 using Statistics: mean, std
-using LatticeProteins: LatticeProteins, parallel_tempering, log_pnat, energies,
+using LatticeProteins: LatticeProteins, sample_msa, ParallelTempering, log_pnat, energies,
     STRUCTURE_A, L, potts, STRUCTURES, StructureSet, shakhnovich_structures,
     structure_index
 
 const LP = LatticeProteins
+
+# Shorthand for the tests below: the parameters of the sampler go into the method, the
+# others into the call.
+function parallel_tempering(
+        s; nseqs = 100, rng = default_rng(), initial_seqs = nothing,
+        structures = STRUCTURES, parameters...
+    )
+    return sample_msa(s, ParallelTempering(; parameters...); nseqs, rng, initial_seqs, structures)
+end
 
 @testset "parallel tempering" begin
     @testset "local updates keep the cached energies consistent" begin
@@ -272,6 +281,26 @@ const LP = LatticeProteins
         end
         @test sum(trips) > 0
         @test trips == whole.diagnostics.round_trips
+    end
+
+    @testset "the method holds the parameters of the sampler" begin
+        betas = [0, 1, 20]
+        method = ParallelTempering(; betas)
+        @test method.betas == [0.0, 1.0, 20.0] && method.betas isa Vector{Float64}
+        @test (method.burnin, method.thin, method.local_steps) == (1000, 10, 10)
+        @test method.threaded && method.rng_mode == :per_temperature
+        method = ParallelTempering(; betas, burnin = 3, thin = 2, local_steps = 4, threaded = false, rng_mode = :shared)
+        r = sample_msa(STRUCTURE_A, method; nseqs = 5, rng = Xoshiro(3))
+        @test r == parallel_tempering(
+            STRUCTURE_A; betas, burnin = 3, thin = 2, local_steps = 4,
+            threaded = false, rng_mode = :shared, nseqs = 5, rng = Xoshiro(3)
+        )
+        @test size(r.samples) == (L, 5)
+        @test r.betas == method.betas && r.betas !== method.betas
+        @test r.rng_mode == :shared
+        @test r.diagnostics.local_attempts == fill(5 * 2 * 4, 3)
+        # the default is 100 sequences, from the default RNG
+        @test size(sample_msa(STRUCTURE_A, ParallelTempering(; betas, burnin = 0, thin = 1, local_steps = 1)).samples) == (L, 100)
     end
 
     @testset "invalid arguments" begin

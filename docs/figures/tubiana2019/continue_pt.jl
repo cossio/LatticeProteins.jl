@@ -3,7 +3,8 @@
 # Set TUBIANA_PYTHON to the Python executable with requirements.txt installed.
 # Checkpoints preserve the RNG stream and temperature states. Re-running the same
 # command resumes after the last committed chunk, without dropping saved draws.
-using LatticeProteins: parallel_tempering, STRUCTURES, STRUCTURE_A, potts, aaseq, log_pnat
+using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, potts, aaseq,
+    log_pnat
 using Random: Xoshiro
 using DelimitedFiles: readdlm, writedlm
 using Serialization: serialize, deserialize
@@ -46,11 +47,12 @@ function initial_state(source, run, parameters)
 end
 function advance!(state, parameters, out, run, batch_samples)
     betas = parameters["betas"]
-    elapsed = @elapsed result = parallel_tempering(
-        STRUCTURE_A; betas,
-        burnin = 0, nseqs = batch_samples, thin = parameters["thin_rounds"],
-        local_steps = parameters["local_steps"], rng = state[:rng], initial_seqs = state[:seqs],
-        structures = STRUCTURES, threaded = false, rng_mode = :shared
+    method = ParallelTempering(;
+        betas, burnin = 0, thin = parameters["thin_rounds"],
+        local_steps = parameters["local_steps"], threaded = false, rng_mode = :shared
+    )
+    elapsed = @elapsed result = sample_msa(
+        STRUCTURE_A, method; nseqs = batch_samples, rng = state[:rng], initial_seqs = state[:seqs]
     )
     global_ids = state[:ids][result.replica_ids]
     # With an even ladder and thin=2, both endpoint edges are attempted on odd

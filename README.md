@@ -39,7 +39,7 @@ X = onehot("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 s = aaseq(X)
 
 # Generate sequences that fold into structure A via Metropolis sampling
-msa = sample_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
+msa = sample_msa(STRUCTURE_A, Metropolis(β=100, nsteps=1000); nseqs=100).samples
 
 # The 28 contacts of structure A, as pairs of residue positions
 cm = contact_map(STRUCTURE_A)
@@ -78,9 +78,10 @@ A structure is referred to by its index, from 1 to 103,346.
 
 | Function | Description |
 |----------|-------------|
-| `metropolis!(seq, s; β, nsteps, rng)` | In-place Metropolis sampling of a sequence |
-| `sample_msa(s; nseqs, β, nsteps, rng)` | Sample an MSA with independent Metropolis chains |
-| `parallel_tempering(s; betas, nseqs, burnin, thin, local_steps, rng, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
+| `sample_msa(s, method; nseqs, rng)` | Sample an MSA of sequences folding into structure `s`, with the given method; the result's `samples` field is the alignment |
+| `Metropolis(; β, nsteps)` | Method: independent Metropolis chains, one per sequence |
+| `ParallelTempering(; betas, burnin, thin, local_steps, threaded)` | Method: replica exchange, with swap and round-trip diagnostics |
+| `metropolis!(seq, s; β, nsteps, rng)` | In-place Metropolis sampling of a single sequence |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 
@@ -91,8 +92,8 @@ using Random: Xoshiro
 # Starting ladder for a pilot; inspect diagnostics before a production run.
 betas = [0.0; exp.(range(log(0.1), log(3000.0); length=31))]
 betas[end] = 3000.0
-result = parallel_tempering(STRUCTURE_A; betas, burnin=5000,
-    nseqs=500, thin=10, local_steps=10, rng=Xoshiro(42))
+method = ParallelTempering(; betas, burnin=5000, thin=10, local_steps=10)
+result = sample_msa(STRUCTURE_A, method; nseqs=500, rng=Xoshiro(42))
 msa = result.samples                         # only the beta=3000 samples
 swap_rates = result.diagnostics.swap_accepts ./ result.diagnostics.swap_attempts
 result.diagnostics.round_trips               # hot → cold → hot, per replica ID

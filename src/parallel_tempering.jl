@@ -62,12 +62,12 @@ end
 Sampling method of [`sample_msa`](@ref): replica exchange, targeting
 `pnat(s, seq)^betas[end]`. `betas` must contain at least two finite, nonnegative, strictly
 increasing inverse selection temperatures (hot to cold). The physical folding temperature
-stays at 1, and all 103,346 compact structures compete, just as in [`log_pnat`](@ref).
+stays at 1, and all 103,346 compact structures compete, just as in [`logpnat`](@ref).
 
 One **round** performs `local_steps` Metropolis steps per replica (the moves of
-[`metropolis!`](@ref)), then proposes swaps on alternating disjoint adjacent edges. For
+[`Metropolis`](@ref)), then proposes swaps on alternating disjoint adjacent edges. For
 two replicas the only edge is attempted every round. A swap is accepted with
-`min(1, exp((betas[i]-betas[j]) * (E[i]-E[j])))`, where `E = -log_pnat`.
+`min(1, exp((betas[i]-betas[j]) * (E[i]-E[j])))`, where `E = -logpnat`.
 
 `burnin` rounds are discarded, then the coldest sequence is saved after every `thin`
 rounds until `nseqs` samples have been saved. Thus each replica receives
@@ -101,9 +101,9 @@ Returns a named tuple with:
 - `samples`: coldest-replica MSA, size `(27, nseqs)`. Samples can be correlated.
 - `betas`: the fixed ladder used in the run.
 - `rng_mode`: the RNG protocol used (`:per_temperature` or `:shared`).
-- `log_pnat`, `replica_ids`: `(length(betas), nseqs)` traces at saved rounds.
+- `logpnat`, `replica_ids`: `(length(betas), nseqs)` traces at saved rounds.
   Rows follow temperatures; IDs follow sequences through swaps.
-- `final_seqs`, `final_log_pnat`: final states at every temperature.
+- `final_seqs`, `final_logpnat`: final states at every temperature.
 - `burnin_diagnostics`, `diagnostics`: separate burn-in and production counters.
   `local_attempts`/`local_accepts` are indexed by temperature;
   `swap_attempts`/`swap_accepts` by adjacent edge. `round_trips` is indexed by
@@ -199,8 +199,8 @@ function sample_msa(
         end
     end
     return (;
-        samples, betas = copy(betas), rng_mode, log_pnat = trace, replica_ids,
+        samples, betas = copy(betas), rng_mode, logpnat = trace, replica_ids,
         final_seqs = stack(chain.seq for chain in chains),
-        final_log_pnat = [-chain.loss for chain in chains], burnin_diagnostics, diagnostics,
+        final_logpnat = [-chain.loss for chain in chains], burnin_diagnostics, diagnostics,
     )
 end

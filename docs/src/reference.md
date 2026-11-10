@@ -41,10 +41,9 @@ STRUCTURE_D
 ### Energy and folding probability
 
 ```@docs
-MJ
 energy
 pnat
-log_pnat
+logpnat
 ```
 
 ### Sampling
@@ -53,7 +52,6 @@ log_pnat
 sample_msa
 Metropolis
 ParallelTempering
-metropolis!
 ```
 
 ## Internals
@@ -80,11 +78,13 @@ energies
 N_CONTACTS
 ```
 
-### Sequences
+### Sequences, interactions and moves
 
 ```@docs
 AMINO_ACIDS
 L
+MJ
+metropolis!
 ```
 
 ### Reference alignments of Jacquin et al. (2016)

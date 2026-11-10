@@ -54,7 +54,7 @@ with folding probability ``P_\text{nat}(S_A \mid v) > 0.995``. Following Jacquin
 
 ## Sampling protocol
 
-The reference-subset reproduction below uses [`metropolis!`](@ref) at ``\beta = 1000``,
+The reference-subset reproduction below uses Metropolis chains at ``\beta = 1000``,
 keeping one sequence every 1,000 steps after a burn-in of 10,000 steps, and filtering at
 ``P_\text{nat} > 0.995``. The full-structure experiment uses [`ParallelTempering`](@ref)
 with a cold replica at the same ``\beta = 1000`` and filters at ``P_\text{nat} > 0.99``.
@@ -262,7 +262,7 @@ the whole retained alignment.
 
 The figures were made with version 2 of the package. Version 3 samples the same
 distributions, and the parallel-tempering commands above reproduce the saved full-model
-alignment. [`metropolis!`](@ref) now proposes only mutations that change the sequence,
+alignment. Metropolis chains now propose only mutations that change the sequence,
 so a regenerated subset alignment is a different sample of the same distribution.
 
 A smaller version of this comparison runs in the test suite (`test/tubiana2019.jl`): it

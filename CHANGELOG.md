@@ -10,14 +10,16 @@ compact structures compete, and a single energy kernel shared by all samplers.
 ### Breaking
 
 - **Public API.** The package now exports its public names: `potts`, `aaseq`, `onehot`;
-  `enumerate_structures`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`; `MJ`, `energy`,
-  `pnat`, `log_pnat`; `sample_msa`, `Metropolis`, `ParallelTempering`, `metropolis!`.
+  `enumerate_structures`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`; `energy`,
+  `pnat`, `logpnat`; `sample_msa`, `Metropolis`, `ParallelTempering`.
   Everything else is internal and can change in any release. Since 2.x exported nothing,
   `using LatticeProteins` now brings these names into scope.
 - **Structures.** `enumerate_structures()` returns the set of all compact structures,
   computed once, instead of recomputing an array at each call.
   `length(enumerate_structures())` is their number and `contact_map(s)` gives the
   contacts of structure `s`; these replace `N_STRUCTURES` and indexing `STRUCTURES`.
+- **`log_pnat` is renamed `logpnat`**, and so are the fields of sampling results:
+  `logpnat`, `final_logpnat`.
 - **Reference structures.** `CONTACT_MAP_A`, ..., `CONTACT_MAP_D` are renamed
   `STRUCTURE_A`, ..., `STRUCTURE_D`: they are indices of structures, not contact maps.
 - **Sampling.** `sample_msa(s, method; nseqs, rng)` replaces both `random_msa` and
@@ -34,22 +36,25 @@ compact structures compete, and a single energy kernel shared by all samplers.
   the constant `SHAKHNOVICH_STRUCTURES`, a `LatticeProteins.StructureSet` instead of a
   bare `(ncontacts, nstructures, 2)` array, and is downloaded the first time it is
   requested instead of when the package is installed.
-- **Metropolis moves** are those of parallel tempering, in `metropolis!` and in
-  `sample_msa` with either method: a step
-  proposes one of the 19 *other* amino acids at a random position, where it used to
-  propose any of the 20 (leaving the sequence unchanged one time in 20). The stationary
-  distribution is the same; seeded trajectories differ from 2.x.
+- **Metropolis moves** are the same with either method of `sample_msa`: a step
+  proposes one of the 19 *other* amino acids at a random position, where `random_msa`
+  used to propose any of the 20 (leaving the sequence unchanged one time in 20). The
+  stationary distribution is the same; seeded trajectories differ from 2.x.
+- **`metropolis!`** is not part of the public API. `sample_msa` with `Metropolis` runs
+  the same chains, from random initial sequences.
 - **Errors.** Invalid arguments throw an `ArgumentError`: sequences of the wrong length
   or with amino acids outside `1:20` (previously an `AssertionError`), and structure
   indices that are out of range (previously a `BoundsError`).
 - **`potts`** throws an `ArgumentError` for characters outside the alphabet, which it
   used to code silently as cysteine (index 1), and for sequences of unequal lengths.
 - **Removed** `load_contact_maps`, `load_miyazawa_jernigan_matrix` and
-  `load_miyazawa_jernigan_aminoacids`: use `MJ`.
+  `load_miyazawa_jernigan_aminoacids`. The interaction matrix `MJ` is not part of the
+  public API: `energy` sums it over the contacts of a structure.
 
 | 2.x | 3.0 |
 |:--|:--|
 | `CONTACT_MAP_A` | `STRUCTURE_A` |
+| `log_pnat` | `logpnat` |
 | `random_msa(s; nseqs, β, nsteps)` | `sample_msa(s, Metropolis(; β, nsteps); nseqs).samples` |
 | `parallel_tempering(s; betas, nseqs, ...)` | `sample_msa(s, ParallelTempering(; betas, ...); nseqs)` |
 | `STRUCTURES[:, s, :]` | `contact_map(s)` |
@@ -60,7 +65,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
 ### Added
 
 - `contact_map`.
-- `metropolis!` and `sample_msa` take a random number generator `rng`.
+- `sample_msa` takes a random number generator `rng`.
 - `ParallelTempering` has an explicit serial `rng_mode=:shared`, which uses a single
   RNG stream: a run can then be continued exactly from the final states of a previous
   call. It is also the RNG protocol of v2.1.0 and of the saved Tubiana alignment.
@@ -77,7 +82,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
   0.01, the resolution of the MJ matrix, and Boltzmann factors are read from a table.
   Energies updated incrementally during sampling therefore never drift, and the
   periodic recomputation of parallel tempering is gone. The floating-point kernel is
-  removed. `energy`, `energies`, `log_pnat` and `pnat` still return `Float64`, equal to
+  removed. `energy`, `energies`, `logpnat` and `pnat` still return `Float64`, equal to
   their previous values up to roundoff.
 - Metropolis and parallel tempering are about three times faster on the full
   structure set. A seeded parallel tempering run makes the same

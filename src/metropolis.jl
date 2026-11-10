@@ -1,6 +1,6 @@
 # State of a Monte Carlo chain targeting structure `s` of a structure set: the sequence,
 # its energies in all the structures of the set (in units of 0.01), a buffer for the
-# energies of a proposed sequence, and `loss = -log_pnat(s, seq)`. Both samplers of the
+# energies of a proposed sequence, and `loss = -logpnat(s, seq)`. Both samplers of the
 # package advance chains with `local_steps!`.
 mutable struct Chain
     seq::Vector{Int}
@@ -32,7 +32,7 @@ function mutate_energies!(E1::Vector{Int32}, E::Vector{Int32}, seq::Vector{Int},
 end
 
 # Performs `nsteps` Metropolis steps on `chain` at inverse temperature `β`, with energy
-# `-log_pnat` of structure `s`, and returns the number of accepted moves. A step proposes
+# `-logpnat` of structure `s`, and returns the number of accepted moves. A step proposes
 # to mutate a uniformly chosen position to one of the other 19 amino acids, chosen
 # uniformly. `sites` and `boltzmann` are those of the structure set of the chain.
 function local_steps!(
@@ -59,17 +59,19 @@ end
 """
     metropolis!(seq, s; β = 1, nsteps = 1, rng = default_rng())
 
-Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`, targeting
-structure `s`. The sequence is mutated in place, and returned.
+Internal. Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`,
+targeting structure `s`. The sequence is mutated in place, and returned. Unlike
+[`sample_msa`](@ref) with [`Metropolis`](@ref), which starts chains from random sequences,
+this continues from the sequence it is given.
 
 Each step proposes to mutate a random position to a different amino acid, chosen
 uniformly among the other 19. The move is accepted or rejected using the Metropolis
 criterion with inverse temperature `β`, where the energy is
-`-log_pnat(s, seq)`. The stationary distribution is thus proportional to
+`-logpnat(s, seq)`. The stationary distribution is thus proportional to
 `pnat(s, seq)^β`.
 
 The energies of `seq` in all structures are kept and updated incrementally after each
-mutation, so a step costs much less than a call to [`log_pnat`](@ref). They are computed
+mutation, so a step costs much less than a call to [`logpnat`](@ref). They are computed
 from scratch at the start of each call: prefer one call with a large `nsteps` to many
 short ones.
 
@@ -100,8 +102,11 @@ end
 
 Sampling method of [`sample_msa`](@ref): independent Metropolis chains. Each sequence of
 the alignment is the end point of its own chain, which starts from a uniformly random
-sequence and makes `nsteps` Metropolis steps (see [`metropolis!`](@ref)) at inverse
-temperature `β`.
+sequence and makes `nsteps` Metropolis steps at inverse temperature `β`.
+
+A step proposes to mutate a random position to a different amino acid, chosen uniformly
+among the other 19, and accepts the move with the Metropolis criterion for the energy
+`-logpnat(s, seq)`.
 
 The sequences are independent, but each is a sample of the distribution `pnat(s, seq)^β`
 only if `nsteps` is long enough for a chain to equilibrate. At strong selection (large
@@ -109,7 +114,7 @@ only if `nsteps` is long enough for a chain to equilibrate. At strong selection 
 
 `sample_msa(s, Metropolis(; β, nsteps); nseqs, rng)` returns a named tuple with:
 - `samples`: the alignment, of size `(27, nseqs)`.
-- `log_pnat`: the log-probability of folding of each of its sequences.
+- `logpnat`: the log-probability of folding of each of its sequences.
 """
 struct Metropolis
     β::Float64
@@ -127,13 +132,13 @@ function sample_msa(
     check_structure(structures, s)
     nseqs ≥ 0 || throw(ArgumentError("nseqs must be nonnegative"))
     samples = rand(rng, 1:20, L, nseqs)
-    log_pnat = Vector{Float64}(undef, nseqs)
+    logpnat = Vector{Float64}(undef, nseqs)
     sites = site_contacts(structures)
     for n in 1:nseqs
         chain = Chain(view(samples, :, n), s, structures)
         local_steps!(rng, chain, s, method.β, method.nsteps, sites, structures.boltzmann)
         samples[:, n] .= chain.seq
-        log_pnat[n] = -chain.loss
+        logpnat[n] = -chain.loss
     end
-    return (; samples, log_pnat)
+    return (; samples, logpnat)
 end

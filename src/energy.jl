@@ -43,8 +43,8 @@ end
     energy(s, seq)
 
 Contact energy of amino acid sequence `seq` in structure `s`: the sum of the
-Miyazawa-Jernigan interaction energies ([`MJ`](@ref)) over the pairs of residues in
-contact in that structure ([`contact_map`](@ref)).
+Miyazawa-Jernigan interaction energies of the pairs of residues in contact in that
+structure ([`contact_map`](@ref)).
 
 `seq` is a vector of length 27 of amino acid indices in `1:20` (see [`potts`](@ref)), and
 `s` the index of a structure, between 1 and 103,346 (see [`enumerate_structures`](@ref)).
@@ -70,7 +70,7 @@ function energies(seq::AbstractVector{<:Integer}; structures::StructureSet = STR
 end
 
 """
-    log_pnat(s, seq)
+    logpnat(s, seq)
 
 Log-probability that sequence `seq` folds into structure `s` (the "native" structure), as
 opposed to any of the other compact structures.
@@ -84,7 +84,7 @@ structures of the lattice ([`enumerate_structures`](@ref)):
 
 See also [`pnat`](@ref), [`energy`](@ref).
 """
-function log_pnat(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES)
+function logpnat(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES)
     check_sequence(seq)
     check_structure(structures, s)
     E = energies!(Vector{Int32}(undef, length(structures)), seq, structures)
@@ -95,8 +95,8 @@ end
     pnat(s, seq)
 
 Probability that sequence `seq` folds into structure `s`.
-Equivalent to `exp(log_pnat(s, seq))`.
+Equivalent to `exp(logpnat(s, seq))`.
 
-See also [`log_pnat`](@ref).
+See also [`logpnat`](@ref).
 """
-pnat(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES) = exp(log_pnat(s, seq; structures))
+pnat(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES) = exp(logpnat(s, seq; structures))

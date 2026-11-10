@@ -1,22 +1,22 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: LatticeProteins, sample_msa, Metropolis, metropolis!, pnat, log_pnat, energies,
+using LatticeProteins: LatticeProteins, sample_msa, Metropolis, metropolis!, pnat, logpnat, energies,
     structure_index, StructureSet, STRUCTURE_A, STRUCTURES, shakhnovich_structures, MJ, L
 using Random: Xoshiro, seed!, randexp
 
 const S10 = shakhnovich_structures()
 const A10 = structure_index(S10, STRUCTURE_A)
 
-# Reference implementation that recomputes log_pnat from scratch at every step, with the
+# Reference implementation that recomputes logpnat from scratch at every step, with the
 # same sequence of random draws as metropolis!.
 function naive_metropolis!(rng, seq, s; β, nsteps, structures)
-    loss = -log_pnat(s, seq; structures)
+    loss = -logpnat(s, seq; structures)
     for _ in 1:nsteps
         i = rand(rng, 1:L)
         aa = rand(rng, 1:19)
         aa += aa >= seq[i] # one of the other 19 amino acids
         old = seq[i]
         seq[i] = aa
-        loss1 = -log_pnat(s, seq; structures)
+        loss1 = -logpnat(s, seq; structures)
         if β * (loss1 - loss) < randexp(rng)
             loss = loss1
         else
@@ -81,7 +81,7 @@ end
         E, E1 = E1, E
     end
 
-    # same trajectories as recomputing log_pnat at every step, on both structure sets
+    # same trajectories as recomputing logpnat at every step, on both structure sets
     seq0 = rand(Xoshiro(7), 1:20, L)
     for β in (1, 10, 100)
         seq1 = metropolis!(copy(seq0), A10; β, nsteps = 300, structures = S10, rng = Xoshiro(8))
@@ -127,11 +127,11 @@ end
     @test method.β === 1.0 && method.nsteps == 10
     @test Metropolis(; β = 2).nsteps == 1000
     r = sample_msa(STRUCTURE_A, method; nseqs = 5, rng = Xoshiro(42))
-    @test keys(r) == (:samples, :log_pnat)
+    @test keys(r) == (:samples, :logpnat)
     @test r.samples isa Matrix{Int}
     @test size(r.samples) == (L, 5)
     @test all(1 .≤ r.samples .≤ 20)
-    @test r.log_pnat == [log_pnat(STRUCTURE_A, seq) for seq in eachcol(r.samples)]
+    @test r.logpnat == [logpnat(STRUCTURE_A, seq) for seq in eachcol(r.samples)]
     @test r == sample_msa(STRUCTURE_A, method; nseqs = 5, rng = Xoshiro(42))
     @test size(sample_msa(STRUCTURE_A, method; nseqs = 0).samples) == (L, 0)
     # the default is 100 sequences, from the default RNG
@@ -145,7 +145,7 @@ end
     end
     r = sample_msa(A10, Metropolis(; β = 10, nsteps = 50); nseqs = 3, structures = S10, rng = Xoshiro(5))
     @test r.samples == seqs
-    @test r.log_pnat == [log_pnat(A10, seq; structures = S10) for seq in eachcol(seqs)]
+    @test r.logpnat == [logpnat(A10, seq; structures = S10) for seq in eachcol(seqs)]
 
     @test_throws ArgumentError sample_msa(STRUCTURE_A, method; nseqs = -1)
     @test_throws ArgumentError sample_msa(0, method)

@@ -1,7 +1,7 @@
 using Test: @test, @testset, @test_throws
 using Random: Xoshiro, default_rng
 using Statistics: mean, std
-using LatticeProteins: LatticeProteins, sample_msa, ParallelTempering, log_pnat, energies,
+using LatticeProteins: LatticeProteins, sample_msa, ParallelTempering, logpnat, energies,
     STRUCTURE_A, L, potts, STRUCTURES, StructureSet, shakhnovich_structures,
     structure_index
 
@@ -26,14 +26,14 @@ end
         chain = LP.Chain(seq, STRUCTURE_A, STRUCTURES)
         @test chain.seq == seq && chain.seq !== seq # the sequence is copied
         @test chain.energies == centi(seq)
-        @test chain.loss ≈ -log_pnat(STRUCTURE_A, seq) atol = 1.0e-13
+        @test chain.loss ≈ -logpnat(STRUCTURE_A, seq) atol = 1.0e-13
         # All amino acids at endpoint/interior positions, including no-ops.
         for i in (1, 14, 27), aa in 1:20
             LP.mutate_energies!(chain.trial, chain.energies, chain.seq, i, aa, sites)
             mutated = copy(seq)
             mutated[i] = aa
             @test chain.trial == centi(mutated)
-            @test LP.folding_loss(chain.trial, STRUCTURE_A, boltzmann) ≈ -log_pnat(STRUCTURE_A, mutated) atol = 1.0e-13
+            @test LP.folding_loss(chain.trial, STRUCTURE_A, boltzmann) ≈ -logpnat(STRUCTURE_A, mutated) atol = 1.0e-13
         end
         # Accepted updates and rejected proposals must leave the cache consistent:
         # integer energies never drift, however many incremental updates are applied.
@@ -42,7 +42,7 @@ end
             @test 0 <= accepted <= 200
             beta == 0 && @test accepted == 200
             @test chain.energies == centi(chain.seq)
-            @test chain.loss == -log_pnat(STRUCTURE_A, chain.seq)
+            @test chain.loss == -logpnat(STRUCTURE_A, chain.seq)
         end
     end
 
@@ -62,7 +62,7 @@ end
             nested[job] = parallel_tempering(STRUCTURE_A; options..., rng = Xoshiro(71), threaded = true)
         end
         @test all(==(serial), nested)
-        @test threaded.final_log_pnat == [log_pnat(STRUCTURE_A, s) for s in eachcol(threaded.final_seqs)]
+        @test threaded.final_logpnat == [logpnat(STRUCTURE_A, s) for s in eachcol(threaded.final_seqs)]
     end
 
     @testset "sampling an exactly enumerable ensemble" begin
@@ -90,7 +90,7 @@ end
             @test mean(values) ≈ expected atol = 6se
         end
         for i in eachindex(betas)
-            test_mean(r.log_pnat[i, :], expected[i])
+            test_mean(r.logpnat[i, :], expected[i])
         end
         test_mean(r.samples[1, :] .== 1, expected_cysteine)
     end
@@ -107,21 +107,21 @@ end
             subset_s; betas = [0.0, 3000.0],
             burnin = 0, nseqs = 0, initial_seqs = initial, structures = S10
         )
-        @test full.final_log_pnat == fill(log_pnat(STRUCTURE_A, initial[:, 1]), 2)
-        @test subset.final_log_pnat == fill(log_pnat(subset_s, initial[:, 1]; structures = S10), 2)
-        @test all(full.final_log_pnat .< subset.final_log_pnat)
+        @test full.final_logpnat == fill(logpnat(STRUCTURE_A, initial[:, 1]), 2)
+        @test subset.final_logpnat == fill(logpnat(subset_s, initial[:, 1]; structures = S10), 2)
+        @test all(full.final_logpnat .< subset.final_logpnat)
         # Exercise subset mutations, not just initialization.
         sampled = parallel_tempering(
             subset_s; betas = [0.0, 3000.0], burnin = 99,
             nseqs = 2, thin = 1, local_steps = 1, initial_seqs = initial,
             structures = S10, rng = Xoshiro(8)
         )
-        @test sampled.final_log_pnat == [
-            log_pnat(subset_s, s; structures = S10)
+        @test sampled.final_logpnat == [
+            logpnat(subset_s, s; structures = S10)
                 for s in eachcol(sampled.final_seqs)
         ]
-        @test sampled.log_pnat[end, :] == [
-            log_pnat(subset_s, s; structures = S10)
+        @test sampled.logpnat[end, :] == [
+            logpnat(subset_s, s; structures = S10)
                 for s in eachcol(sampled.samples)
         ]
         @test_throws ArgumentError parallel_tempering(10_001; betas = [0.0, 1.0], structures = S10)
@@ -201,7 +201,7 @@ end
             observed[sample[site], j] += 1 / size(r.samples, 2)
         end
         @test maximum(abs, observed .- exact) < 0.015
-        @test abs(sum(exp, r.log_pnat[end, :]) / size(r.samples, 2) - exact_pnat) < 0.01
+        @test abs(sum(exp, r.logpnat[end, :]) / size(r.samples, 2) - exact_pnat) < 0.01
         @test sum(r.diagnostics.round_trips) > 100
     end
 
@@ -226,8 +226,8 @@ end
         @test a.diagnostics.local_accepts[1] == 16 # beta=0 accepts every proposal
         @test all(a.diagnostics.swap_accepts .<= a.diagnostics.swap_attempts)
         @test all(sort(ids) == 1:4 for ids in eachcol(a.replica_ids))
-        @test a.log_pnat[end, :] == [log_pnat(STRUCTURE_A, s) for s in eachcol(a.samples)]
-        @test a.final_log_pnat == [log_pnat(STRUCTURE_A, s) for s in eachcol(a.final_seqs)]
+        @test a.logpnat[end, :] == [logpnat(STRUCTURE_A, s) for s in eachcol(a.samples)]
+        @test a.final_logpnat == [logpnat(STRUCTURE_A, s) for s in eachcol(a.final_seqs)]
         @test a.samples[:, end] == a.final_seqs[:, end]
 
         # The two-replica swap schedule attempts its only edge every round.
@@ -237,7 +237,7 @@ end
         )
         @test c.burnin_diagnostics.swap_attempts == [99]
         @test c.diagnostics.swap_attempts == [2]
-        @test c.final_log_pnat == [log_pnat(STRUCTURE_A, s) for s in eachcol(c.final_seqs)]
+        @test c.final_logpnat == [logpnat(STRUCTURE_A, s) for s in eachcol(c.final_seqs)]
         empty = parallel_tempering(
             STRUCTURE_A; betas = [0.0, 1.0], nseqs = 0,
             burnin = 0, initial_seqs = initial[:, 1:2]
@@ -268,7 +268,7 @@ end
         )
         @test whole.rng_mode == :shared
         @test whole.samples == hcat(first.samples, second.samples)
-        @test whole.log_pnat == hcat(first.log_pnat, second.log_pnat)
+        @test whole.logpnat == hcat(first.logpnat, second.logpnat)
         @test whole.final_seqs == second.final_seqs
         ids = hcat(first.replica_ids, first.replica_ids[:, end][second.replica_ids])
         @test whole.replica_ids == ids

@@ -4,7 +4,7 @@
 # Checkpoints preserve the RNG stream and temperature states. Re-running the same
 # command resumes after the last committed chunk, without dropping saved draws.
 using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, potts, aaseq,
-    log_pnat
+    logpnat
 using Random: Xoshiro
 using DelimitedFiles: readdlm, writedlm
 using Serialization: serialize, deserialize
@@ -65,9 +65,9 @@ function advance!(state, parameters, out, run, batch_samples)
         state[:stages][cold] == 1 && (state[:stages][cold] = 2)
     end
     offset = parameters["initial_samples_per_run"] + state[:added_samples]
-    p = exp.(result.log_pnat[end, :])
+    p = exp.(result.logpnat[end, :])
     indices = unique(round.(Int, range(1, batch_samples; length = min(50, batch_samples))))
-    errors = [abs(p[i] - exp(log_pnat(STRUCTURE_A, result.samples[:, i]))) for i in indices]
+    errors = [abs(p[i] - exp(logpnat(STRUCTURE_A, result.samples[:, i]))) for i in indices]
     maximum(errors) < 1.0e-10 || error("direct probability check failed")
     batch = state[:batch] + 1
     prefix = joinpath(out, "chunks", "run_$(run)_batch_$(batch)")
@@ -78,7 +78,7 @@ function advance!(state, parameters, out, run, batch_samples)
     csv(
         prefix * "_trace.csv", ["sample", "beta", "pnat", "replica_id"],
         [
-            (offset + i, betas[j], exp(result.log_pnat[j, i]), global_ids[j, i])
+            (offset + i, betas[j], exp(result.logpnat[j, i]), global_ids[j, i])
                 for i in 1:batch_samples for j in eachindex(betas)
         ]
     )
@@ -133,7 +133,7 @@ function aggregate(source, out, parameters, states)
         csv(
             joinpath(out, "run_$(run)_final.csv"), ["beta", "pnat", "sequence"],
             [
-                (parameters["betas"][j], exp(log_pnat(STRUCTURE_A, state[:seqs][:, j])), aaseq(state[:seqs][:, j]))
+                (parameters["betas"][j], exp(logpnat(STRUCTURE_A, state[:seqs][:, j])), aaseq(state[:seqs][:, j]))
                     for j in eachindex(parameters["betas"])
             ]
         )

@@ -62,13 +62,13 @@ energy(STRUCTURE_B, seq)
 
 # The probability that a sequence folds into a particular "native" structure is given
 # by a Boltzmann distribution over all competing compact structures. This is
-# [`pnat`](@ref) (and its logarithm [`log_pnat`](@ref)):
+# [`pnat`](@ref) (and its logarithm [`logpnat`](@ref)):
 
 pnat(STRUCTURE_A, seq)
 
 #-
 
-log_pnat(STRUCTURE_A, seq)
+logpnat(STRUCTURE_A, seq)
 
 # ## Sampling sequences that fold
 #
@@ -96,14 +96,7 @@ ladder = ParallelTempering(betas = [0.0, 1.0, 10.0, 100.0], burnin = 200, thin =
 result = sample_msa(STRUCTURE_A, ladder; nseqs = 20)
 result.diagnostics.swap_accepts ./ result.diagnostics.swap_attempts
 
-# [`metropolis!`](@ref) exposes the Metropolis sampler for a single sequence, mutating it
-# in place:
-
-s = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
-metropolis!(s, STRUCTURE_A; β = 100, nsteps = 200)
-pnat(STRUCTURE_A, s)
-
-# Both functions take a random number generator as the keyword argument `rng`, for
+# `sample_msa` takes a random number generator as the keyword argument `rng`, for
 # reproducible runs.
 
 # ## Internals: the model of Jacquin et al. (2016)

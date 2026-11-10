@@ -7,8 +7,8 @@ import LatticeProteins
         [
             :potts, :aaseq, :onehot,
             :enumerate_structures, :contact_map, :STRUCTURE_A, :STRUCTURE_B, :STRUCTURE_C, :STRUCTURE_D,
-            :MJ, :energy, :pnat, :log_pnat,
-            :sample_msa, :Metropolis, :ParallelTempering, :metropolis!,
+            :energy, :pnat, :logpnat,
+            :sample_msa, :Metropolis, :ParallelTempering,
         ]
     )
     @test Set(names(LatticeProteins)) == union(api, [:LatticeProteins])
@@ -19,7 +19,7 @@ import LatticeProteins
     # internal.
     internal = [
         :StructureSet, :STRUCTURES, :N_STRUCTURES, :shakhnovich_structures, :structure_index,
-        :energies, :N_CONTACTS, :AMINO_ACIDS, :L, :Hugo_MSA, :Hugo_MSA_pnat, :Hugo_MSA_path,
+        :energies, :N_CONTACTS, :AMINO_ACIDS, :L, :MJ, :metropolis!, :Hugo_MSA, :Hugo_MSA_pnat, :Hugo_MSA_path,
     ]
     @test all(name -> isdefined(LatticeProteins, name) && !Base.ispublic(LatticeProteins, name), internal)
 end

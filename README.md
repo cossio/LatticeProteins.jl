@@ -63,8 +63,7 @@ A structure is referred to by its index, from 1 to 103,346.
 |----------|-------------|
 | `energy(s, seq)` | Contact energy of sequence `seq` in structure `s` |
 | `pnat(s, seq)` | Probability that `seq` folds into structure `s` |
-| `log_pnat(s, seq)` | Log-probability of folding |
-| `MJ` | 20×20 Miyazawa-Jernigan interaction matrix |
+| `logpnat(s, seq)` | Log-probability of folding |
 
 ### Sequence encoding
 
@@ -81,7 +80,6 @@ A structure is referred to by its index, from 1 to 103,346.
 | `sample_msa(s, method; nseqs, rng)` | Sample an MSA of sequences folding into structure `s`, with the given method; the result's `samples` field is the alignment |
 | `Metropolis(; β, nsteps)` | Method: independent Metropolis chains, one per sequence |
 | `ParallelTempering(; betas, burnin, thin, local_steps, threaded)` | Method: replica exchange, with swap and round-trip diagnostics |
-| `metropolis!(seq, s; β, nsteps, rng)` | In-place Metropolis sampling of a single sequence |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 

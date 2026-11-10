@@ -1,5 +1,5 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: LatticeProteins, pnat, log_pnat, energy, energies, potts, contact_map,
+using LatticeProteins: LatticeProteins, pnat, logpnat, energy, energies, potts, contact_map,
     structure_index, StructureSet, STRUCTURES, shakhnovich_structures, MJ, N_STRUCTURES,
     STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 
@@ -64,9 +64,9 @@ end
     @test_throws ArgumentError energies([1, 2, 3])
 end
 
-@testset "log_pnat and pnat" begin
+@testset "logpnat and pnat" begin
     seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
-    lp = log_pnat(STRUCTURE_A, seq)
+    lp = logpnat(STRUCTURE_A, seq)
     @test lp isa Float64
     @test lp < 0
     @test pnat(STRUCTURE_A, seq) == exp(lp)
@@ -85,15 +85,15 @@ end
     # the subset has fewer competitors, so a structure is more probable in it
     @test pnat(STRUCTURE_A, seq) < pnat(A10, seq; structures = S10)
     # the default is the full set
-    @test log_pnat(STRUCTURE_A, seq; structures = STRUCTURES) == lp
+    @test logpnat(STRUCTURE_A, seq; structures = STRUCTURES) == lp
 
     # a set of two structures with one contact each
     S = StructureSet([[1 4], [1 6]])
     @test pnat(1, seq; structures = S) ≈ 1 / (1 + exp(MJ[seq[1], seq[4]] - MJ[seq[1], seq[6]]))
     @test pnat(1, seq; structures = S) + pnat(2, seq; structures = S) ≈ 1
 
-    @test_throws ArgumentError log_pnat(1, [1, 2, 3])
-    @test_throws ArgumentError log_pnat(0, seq)
+    @test_throws ArgumentError logpnat(1, [1, 2, 3])
+    @test_throws ArgumentError logpnat(0, seq)
     @test_throws ArgumentError pnat(N_STRUCTURES + 1, seq)
 end
 

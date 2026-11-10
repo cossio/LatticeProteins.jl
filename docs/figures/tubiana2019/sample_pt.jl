@@ -4,7 +4,7 @@
 # rounds, saving every 2 rounds, 5 mutations per replica per round.
 # Keep the unfiltered trajectories: convergence must be checked before filtering.
 using LatticeProteins: sample_msa, ParallelTempering, STRUCTURES, STRUCTURE_A, aaseq,
-    log_pnat, Hugo_MSA_path
+    logpnat, Hugo_MSA_path
 using Random: Xoshiro
 using DelimitedFiles: writedlm
 using Statistics: mean
@@ -57,10 +57,10 @@ function main(args)
     Threads.@threads for run in 1:runs
         method = ParallelTempering(; betas, burnin, thin, local_steps, threaded = false, rng_mode = :shared)
         elapsed = @elapsed r = sample_msa(STRUCTURE_A, method; nseqs, rng = Xoshiro(seeds[run]))
-        p = exp.(r.log_pnat[end, :])
+        p = exp.(r.logpnat[end, :])
         # Recompute sampled probabilities from the sequences alone.
         checks = unique(round.(Int, range(1, nseqs; length = min(nseqs, 50))))
-        errors = [abs(p[i] - exp(log_pnat(STRUCTURE_A, r.samples[:, i]))) for i in checks]
+        errors = [abs(p[i] - exp(logpnat(STRUCTURE_A, r.samples[:, i]))) for i in checks]
         maximum(errors) < 1.0e-10 || error("cached probability check failed in run $run")
         write_csv(
             joinpath(out, "run_$(run)_cold.csv"),
@@ -71,7 +71,7 @@ function main(args)
             joinpath(out, "run_$(run)_trace.csv"),
             ["sample", "beta", "pnat", "replica_id"],
             [
-                (i, betas[j], exp(r.log_pnat[j, i]), r.replica_ids[j, i])
+                (i, betas[j], exp(r.logpnat[j, i]), r.replica_ids[j, i])
                     for i in 1:nseqs for j in eachindex(betas)
             ]
         )
@@ -88,7 +88,7 @@ function main(args)
         )
         write_csv(
             joinpath(out, "run_$(run)_final.csv"), ["beta", "pnat", "sequence"],
-            [(betas[j], exp(r.final_log_pnat[j]), aaseq(r.final_seqs[:, j])) for j in eachindex(betas)]
+            [(betas[j], exp(r.final_logpnat[j]), aaseq(r.final_seqs[:, j])) for j in eachindex(betas)]
         )
         open(joinpath(out, "run_$(run).msa"), "w") do io
             for i in 1:nseqs

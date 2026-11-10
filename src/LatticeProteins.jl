@@ -29,9 +29,9 @@ export potts, aaseq, onehot
 # Structures
 export enumerate_structures, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 # Energy and folding probability
-export MJ, energy, pnat, log_pnat
+export energy, pnat, logpnat
 # Sampling
-export sample_msa, Metropolis, ParallelTempering, metropolis!
+export sample_msa, Metropolis, ParallelTempering
 
 """
     L

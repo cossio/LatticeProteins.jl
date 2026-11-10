@@ -69,7 +69,7 @@ function main(args)
             )
             rows = [
                 (
-                        sample * thin, exp(r.log_pnat[end, sample]), r.replica_ids[end, sample],
+                        sample * thin, exp(r.logpnat[end, sample]), r.replica_ids[end, sample],
                         aaseq(r.samples[:, sample]),
                     ) for sample in 1:nseqs
             ]
@@ -81,7 +81,7 @@ function main(args)
                 joinpath(out, "pt_$(run)_trace.csv"),
                 ["production_round", "temperature_index", "beta", "pnat", "replica_id"],
                 [
-                    (sample * thin, i, betas[i], exp(r.log_pnat[i, sample]), r.replica_ids[i, sample])
+                    (sample * thin, i, betas[i], exp(r.logpnat[i, sample]), r.replica_ids[i, sample])
                         for sample in 1:nseqs for i in eachindex(betas)
                 ]
             )
@@ -98,9 +98,9 @@ function main(args)
             summaries[job] = Dict(
                 "method" => "parallel_tempering", "run" => run,
                 "seed" => seed, "seconds" => elapsed,
-                "pnat_min" => minimum(exp.(r.log_pnat[end, :])),
-                "pnat_max" => maximum(exp.(r.log_pnat[end, :])),
-                "pnat_mean" => sum(exp.(r.log_pnat[end, :])) / nseqs,
+                "pnat_min" => minimum(exp.(r.logpnat[end, :])),
+                "pnat_max" => maximum(exp.(r.logpnat[end, :])),
+                "pnat_mean" => sum(exp.(r.logpnat[end, :])) / nseqs,
                 "cold_replica_ids" => sort(unique(r.replica_ids[end, :])),
                 "round_trips" => d.round_trips,
                 "burnin_round_trips" => r.burnin_diagnostics.round_trips,

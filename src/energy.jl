@@ -40,15 +40,14 @@ function folding_loss(E::Vector{Int32}, s::Integer, boltzmann::Vector{Float64})
 end
 
 """
-    energy(s, seq; structures = STRUCTURES)
+    energy(s, seq)
 
 Contact energy of amino acid sequence `seq` in structure `s`: the sum of the
 Miyazawa-Jernigan interaction energies ([`MJ`](@ref)) over the pairs of residues in
-contact in that structure.
+contact in that structure ([`contact_map`](@ref)).
 
-`seq` is a vector of length 27 of amino acid indices in `1:20` (see [`potts`](@ref)). `s`
-is the index of the structure in the [`StructureSet`](@ref) `structures`, which defaults
-to all compact structures [`STRUCTURES`](@ref).
+`seq` is a vector of length 27 of amino acid indices in `1:20` (see [`potts`](@ref)), and
+`s` the index of a structure, in `1:N_STRUCTURES`.
 """
 function energy(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES)
     check_sequence(seq)
@@ -61,7 +60,7 @@ end
 
 Contact energies of `seq` in every structure of `structures`, as a `Vector{Float64}` of
 length `length(structures)`. Equivalent to `[energy(s, seq; structures) for s in
-1:length(structures)]`, but faster.
+1:length(structures)]`, but faster. Internal.
 
 See also [`energy`](@ref).
 """
@@ -71,22 +70,17 @@ function energies(seq::AbstractVector{<:Integer}; structures::StructureSet = STR
 end
 
 """
-    log_pnat(s, seq; structures = STRUCTURES)
+    log_pnat(s, seq)
 
 Log-probability that sequence `seq` folds into structure `s` (the "native" structure), as
-opposed to any of the other structures in `structures`.
+opposed to any of the other compact structures.
 
-The probability is a Boltzmann distribution at temperature 1 over the structures in
-`structures`:
+The probability is a Boltzmann distribution at temperature 1 over all `N_STRUCTURES` =
+103,346 compact structures of the lattice:
 
 ```math
 \\log P_\\text{nat}(s \\mid \\text{seq}) = -\\log \\sum_{s'} \\exp\\bigl(E(s, \\text{seq}) - E(s', \\text{seq})\\bigr)
 ```
-
-By default `structures` is [`STRUCTURES`](@ref), all 103,346 compact structures of the
-lattice. Pass `structures = shakhnovich_structures()` to sum only over the representative
-subset of 10,000 structures used by Jacquin et al. (2016) (see
-[`shakhnovich_structures`](@ref)); note that structure indices refer to the set in use.
 
 See also [`pnat`](@ref), [`energy`](@ref).
 """
@@ -98,10 +92,10 @@ function log_pnat(s::Integer, seq::AbstractVector{<:Integer}; structures::Struct
 end
 
 """
-    pnat(s, seq; structures = STRUCTURES)
+    pnat(s, seq)
 
 Probability that sequence `seq` folds into structure `s`.
-Equivalent to `exp(log_pnat(s, seq; structures))`.
+Equivalent to `exp(log_pnat(s, seq))`.
 
 See also [`log_pnat`](@ref).
 """

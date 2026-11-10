@@ -35,7 +35,7 @@ println("top eigenvalues: ", round.(ev.values[end:-1:(end - 3)]; sigdigits = 3))
 # average covariance between pairs of sites in contact in structure A (20×20)
 S10 = shakhnovich_structures()
 a10 = structure_index(S10, STRUCTURE_A)
-cmA = contact_map(S10, a10)
+cmA = contact_map(a10; structures = S10)
 P = potts(seqs)                                                # 27 × M
 C = zeros(20, 20)
 for k in 1:N_CONTACTS
@@ -111,7 +111,7 @@ function find_walk(cm)
     return [site_coords(s)[c] for s in found[], c in 1:3]
 end
 for (name, s) in (("A", a10), ("G", 6863))
-    cm = contact_map(S10, s)
+    cm = contact_map(s; structures = S10)
     writedlm(joinpath(outdir, "walk_$name.csv"), find_walk(cm), ',')
     writedlm(joinpath(outdir, "contacts_$name.csv"), cm, ',')
 end

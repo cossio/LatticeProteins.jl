@@ -6,7 +6,7 @@
 
 Simulate the lattice proteins model on a 3×3×3 cubic lattice in Julia.
 
-In this model, a protein is represented as a chain of 27 amino acids that folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix. The probability that a sequence folds into a given "native" structure is computed via a Boltzmann distribution over all 103,346 compact structures of the lattice (or, optionally, over the representative subset of 10,000 structures selected by the Shakhnovich group and used by Jacquin et al. (2016)).
+In this model, a protein is represented as a chain of 27 amino acids that folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is determined by pairwise contacts between amino acids using the Miyazawa-Jernigan interaction matrix. The probability that a sequence folds into a given "native" structure is computed via a Boltzmann distribution over all 103,346 compact structures of the lattice.
 
 ## Installation
 
@@ -24,8 +24,8 @@ The package does not export any names: import the ones you need, or use the
 declared `public`); anything else is internal and may change in any release.
 
 ```julia
-using LatticeProteins: pnat, energy, onehot, aaseq, potts, random_msa, structure_index,
-    STRUCTURE_A, shakhnovich_structures, Hugo_MSA, Hugo_MSA_pnat
+using LatticeProteins: pnat, energy, onehot, aaseq, potts, random_msa, contact_map,
+    STRUCTURE_A
 
 # Compute the probability that a sequence folds into structure A
 seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")  # convert to integer-coded sequence
@@ -43,47 +43,30 @@ s = aaseq(X)
 # Generate sequences that fold into structure A via Metropolis sampling
 msa = random_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
 
-# Compete only against the subset of 10,000 structures used by Jacquin et al. (2016),
-# as in the reference MSAs (structure indices refer to the set in use)
-S10 = shakhnovich_structures()
-a = structure_index(S10, STRUCTURE_A)   # 625
-p_ref = pnat(a, seq; structures=S10)
-msa_ref = random_msa(a; nseqs=100, β=100, nsteps=1000, structures=S10)
-
-# Load reference MSA datasets from Jacquin et al. (2016)
-sequences = Hugo_MSA(:A)
-pnat_values = Hugo_MSA_pnat(:A)
+# The 28 contacts of structure A, as pairs of residue positions
+cm = contact_map(STRUCTURE_A)
 ```
 
 ## API overview
 
 ### Structures
 
-A `StructureSet` is a set of structures competing to fold a sequence. Structures are
-referred to by their index in a set.
+A structure is referred to by its index, from 1 to `N_STRUCTURES`.
 
 | Symbol | Description |
 |--------|-------------|
-| `StructureSet(contact_maps)` | A set of structures, from their contact maps (`ncontacts × 2` matrices of residue pairs) |
-| `STRUCTURES` | The set of all 103,346 compact structures (the default) |
-| `shakhnovich_structures()` | The representative subset of 10,000 structures (Heo, Maslov & Shakhnovich 2011) used by Jacquin et al. (2016); downloaded on first use |
-| `STRUCTURE_A`, `STRUCTURE_B`, `STRUCTURE_C`, `STRUCTURE_D` | Indices in `STRUCTURES` of four reference structures from Jacquin et al. (2016) |
-| `length(S)`, `contact_map(S, s)` | Number of structures of a set, and contact map of its structure `s` |
-| `structure_index(S, cm)`, `structure_index(S, s; from)` | Index in `S` of a contact map, or of structure `s` of another set (by default `STRUCTURES`) |
-| `enumerate_structures()` | Regenerate the set of all compact structures |
-| `L`, `N_CONTACTS`, `N_STRUCTURES` | Sequence length (27), contacts per compact structure (28), number of compact structures (103,346) |
+| `N_STRUCTURES` | Number of compact structures (103,346) |
+| `contact_map(s)` | Contact map of structure `s`: a `28 × 2` matrix of pairs of residue positions |
+| `STRUCTURE_A`, `STRUCTURE_B`, `STRUCTURE_C`, `STRUCTURE_D` | Indices of four reference structures from Jacquin et al. (2016) |
 
 ### Energy and folding probability
 
 | Function | Description |
 |----------|-------------|
 | `energy(s, seq)` | Contact energy of sequence `seq` in structure `s` |
-| `energies(seq)` | Contact energies of `seq` in every structure |
 | `pnat(s, seq)` | Probability that `seq` folds into structure `s` |
 | `log_pnat(s, seq)` | Log-probability of folding |
 | `MJ` | 20×20 Miyazawa-Jernigan interaction matrix |
-
-All of these functions take a `structures` keyword argument, the `StructureSet` of competing structures (default: `STRUCTURES`).
 
 ### Sequence encoding
 
@@ -93,14 +76,15 @@ All of these functions take a `structures` keyword argument, the `StructureSet` 
 | `potts(seq)` | Convert to integer-coded (Potts) representation |
 | `aaseq(X)` | Convert from one-hot or integer coding back to amino acid string(s) |
 | `AMINO_ACIDS` | Amino acid alphabet: `"CMFILVWYAGTSNQDEHRKP-"` |
+| `L` | Sequence length (27) |
 
 ### Sampling
 
 | Function | Description |
 |----------|-------------|
-| `metropolis!(seq, s; β, nsteps, structures, rng)` | In-place Metropolis sampling of a sequence |
-| `random_msa(s; nseqs, β, nsteps, structures, rng)` | Generate a random MSA via Metropolis sampling |
-| `parallel_tempering(s; betas, nseqs, burnin, thin, local_steps, structures, rng, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
+| `metropolis!(seq, s; β, nsteps, rng)` | In-place Metropolis sampling of a sequence |
+| `random_msa(s; nseqs, β, nsteps, rng)` | Generate a random MSA via Metropolis sampling |
+| `parallel_tempering(s; betas, nseqs, burnin, thin, local_steps, rng, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 
@@ -120,11 +104,8 @@ result.diagnostics.round_trips               # hot → cold → hot, per replica
 
 Burn-in and thinning are measured in exchange rounds, each containing
 `local_steps` mutation proposals per replica. The example uses 50,000 burn-in
-proposals per replica. The target distribution is proportional to `pnat^beta`;
-the default folding model includes all 103,346 compact structures. To use the
-10,000-structure subset of Jacquin et al. (2016), pass
-`structures=shakhnovich_structures()` and translate the target with
-`structure_index(shakhnovich_structures(), STRUCTURE_A)`. Inspect temperature
+proposals per replica. The target distribution is proportional to `pnat^beta`.
+Inspect temperature
 traversal and compare independent runs: a high `pnat` alone does not demonstrate
 equilibration, and saved samples are not necessarily independent.
 
@@ -161,13 +142,14 @@ see its header for shorter pilot settings. The output directory must not already
 exist. It defaults to the full model; an optional final `shakhnovich` argument
 selects the 10,000-structure subset and records that choice in the results.
 
-### Reference data
+### Internals
 
-| Function | Description |
-|----------|-------------|
-| `Hugo_MSA(which)` | Load reference MSA (`:A`, `:B`, `:C`, or `:D`) of Jacquin et al. (2016) |
-| `Hugo_MSA_pnat(which)` | Load reference pnat values |
-| `Hugo_MSA_path(which)` | Path of the file with both |
+Internally, the functions above take a keyword argument `structures` that replaces the
+set of competing structures. The documentation and the tests use it with the subset of
+10,000 structures of Jacquin et al. (2016) (`LatticeProteins.shakhnovich_structures()`),
+to compare with published results and with the reference alignments of that paper
+(`LatticeProteins.Hugo_MSA`). None of this is part of the public API; see the
+[reference](https://cossio.github.io/LatticeProteins.jl/dev/reference/#Internals).
 
 ## Citation
 

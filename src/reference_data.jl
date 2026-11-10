@@ -2,6 +2,8 @@
     Hugo_MSA_path(which::Symbol)
 
 Return the file path to one of the reference MSA datasets from Jacquin et al. (2016).
+Internal, like the other `Hugo_MSA` functions: these alignments were sampled against the
+subset of 10,000 structures ([`shakhnovich_structures`](@ref)), not the full model.
 `which` must be one of `:A`, `:B`, `:C`, or `:D`, corresponding to the four reference
 structures ([`STRUCTURE_A`](@ref), etc.). Each line of the file holds the inverse
 temperature used for sampling, the folding probability and the sequence.

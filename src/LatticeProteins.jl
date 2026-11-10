@@ -6,11 +6,8 @@ Simulate the lattice proteins model on a 3×3×3 cubic lattice in Julia.
 A lattice protein is a simplified model where a protein sequence of 27 amino acids
 folds on a 3×3×3 cubic lattice. The energy of a sequence in a given structure is
 determined by pairwise contacts using the Miyazawa-Jernigan interaction matrix. The
-probability that a sequence folds into a structure is a Boltzmann distribution over a
-set of competing compact structures ([`StructureSet`](@ref)): by default all 103,346
-compact structures of the lattice ([`STRUCTURES`](@ref)), or optionally the representative
-subset of 10,000 structures of Heo, Maslov & Shakhnovich (2011) used by Jacquin et al.
-(2016) ([`shakhnovich_structures`](@ref)).
+probability that a sequence folds into a structure is a Boltzmann distribution over all
+103,346 compact structures of the lattice, which compete to fold the sequence.
 
 The package exports no names. Its public API is the list of names declared `public`
 (see `names(LatticeProteins)`); everything else is internal and can change in any release.
@@ -28,18 +25,13 @@ using DelimitedFiles: readdlm
 using Random: AbstractRNG, Xoshiro, default_rng, randexp
 
 # Sequences
-public AMINO_ACIDS, onehot, potts, aaseq
-# Lattice and structures
-public L, N_CONTACTS, N_STRUCTURES
-public StructureSet, STRUCTURES, shakhnovich_structures, enumerate_structures
-public contact_map, structure_index
-public STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
+public AMINO_ACIDS, L, potts, aaseq, onehot
+# Structures
+public N_STRUCTURES, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 # Energy and folding probability
-public MJ, energy, energies, pnat, log_pnat
+public MJ, energy, pnat, log_pnat
 # Sampling
 public metropolis!, random_msa, parallel_tempering
-# Reference data
-public Hugo_MSA, Hugo_MSA_pnat, Hugo_MSA_path
 
 """
     L

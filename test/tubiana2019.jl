@@ -28,7 +28,7 @@ function fig4_statistics(seqs::AbstractMatrix{Int})
     cons = [log(20) + sum(p > 0 ? p * log(p) : 0.0 for p in f[:, i]) for i in 1:L]
     Xc = X .- mean(X; dims = 2)
     w = eigen(Symmetric(Xc * Xc' / M)).vectors[:, end]
-    cm = contact_map(S, A10)
+    cm = contact_map(A10; structures = S)
     C = zeros(20, 20)
     for k in 1:N_CONTACTS
         i, j = cm[k, 1], cm[k, 2]

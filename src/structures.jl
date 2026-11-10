@@ -44,18 +44,20 @@ contact map per structure: a matrix of size `(ncontacts, 2)` whose rows are the 
 residue positions (in `1:27`) in contact. All structures must have the same number of
 contacts.
 
-The functions that depend on the folding probability ([`pnat`](@ref),
-[`metropolis!`](@ref), [`parallel_tempering`](@ref), ...) take the set of competing
-structures as the keyword argument `structures`, and refer to a structure by its index in
-that set. The package provides two sets:
+The functions that take a structure index ([`contact_map`](@ref), [`energy`](@ref),
+[`pnat`](@ref), [`metropolis!`](@ref), [`parallel_tempering`](@ref), ...) accept the set of
+competing structures as the keyword argument `structures`, and the index then refers to
+that set. The package has two sets:
 
 - [`STRUCTURES`](@ref): all 103,346 compact structures of the lattice (the default);
 - [`shakhnovich_structures`](@ref)`()`: the subset of 10,000 structures used by Jacquin et
   al. (2016).
 
-`length(S)` is the number of structures of a set `S`, [`contact_map`](@ref)`(S, s)` the
-contact map of its structure `s`, and [`structure_index`](@ref) finds a structure in a
-set, which translates indices between sets.
+`length(S)` is the number of structures of a set `S`, and [`structure_index`](@ref) finds
+a structure in a set, which translates indices between sets.
+
+This type and the `structures` keyword are internal: the public API is the model with all
+compact structures.
 
 # Example
 
@@ -125,18 +127,31 @@ function check_structure(S::StructureSet, s::Integer)
 end
 
 """
-    contact_map(S::StructureSet, s)
+    contact_map(s)
 
-Contact map of structure `s` of the set `S`: a `Matrix{Int}` of size `(ncontacts, 2)`
-whose rows are the pairs of residue positions in contact.
+Contact map of structure `s`, one of the `N_STRUCTURES` = 103,346 compact structures of a
+27-mer on the 3×3×3 cubic lattice: a `Matrix{Int}` of size `(28, 2)` whose rows are the
+pairs `(i, j)` of residue positions in contact, with `i < j`, sorted lexicographically.
+
+The structures are all the self-avoiding walks visiting the 27 lattice sites, modulo the 48
+rotations and reflections of the cube, numbered in a fixed order. The chain direction is
+kept: reversing the chain maps contact `(i, j)` to `(28 - j, 28 - i)`, which in general
+gives a different contact map, so a structure and its chain reversal count as distinct
+structures (62 of them are their own reversal).
 
 ```julia
-contact_map(STRUCTURES, STRUCTURE_A)  # the 28 contacts of structure A
+contact_map(STRUCTURE_A)  # the 28 contacts of structure A
 ```
+
+# References
+
+- Shakhnovich, E. I., and A. M. Gutin. "Enumeration of all compact conformations of
+  copolymers with random sequence of links." *The Journal of Chemical Physics* 93.8
+  (1990): 5967-5971.
 """
-function contact_map(S::StructureSet, s::Integer)
-    check_structure(S, s)
-    return Int[S.contacts[c, k, s] for k in 1:ncontacts(S), c in 1:2]
+function contact_map(s::Integer; structures::StructureSet = STRUCTURES)
+    check_structure(structures, s)
+    return Int[structures.contacts[c, k, s] for k in 1:ncontacts(structures), c in 1:2]
 end
 
 # Canonical representation of a contact map, independent of the order of the contacts and
@@ -147,8 +162,8 @@ contact_key(cm::AbstractMatrix{<:Integer}) = sort!([minmax(Int(cm[k, 1]), Int(cm
     structure_index(S::StructureSet, cm::AbstractMatrix)
     structure_index(S::StructureSet, s::Integer; from = STRUCTURES)
 
-Index within the set `S` of the structure with contact map `cm`, or `nothing` if it is not
-there. `cm` is a matrix of contact pairs as returned by [`contact_map`](@ref); the order
+Internal. Index within the set `S` of the structure with contact map `cm`, or `nothing` if
+it is not there. `cm` is a matrix of contact pairs as returned by [`contact_map`](@ref); the order
 of the contacts and the order within each pair are ignored.
 
 The second method looks for structure `s` of the set `from` (by default
@@ -177,49 +192,25 @@ function structure_index(S::StructureSet, cm::AbstractMatrix{<:Integer})
     return nothing
 end
 
-structure_index(S::StructureSet, s::Integer; from::StructureSet = STRUCTURES) = structure_index(S, contact_map(from, s))
-
-"""
-    enumerate_structures()
-
-Enumerate all maximally compact structures of a 27-mer on the 3×3×3 cubic lattice, that is,
-all self-avoiding walks visiting the 27 lattice sites, modulo the 48 rotations and
-reflections of the cube. There are 103,346 of them. The chain direction is kept: reversing
-the chain maps contact `(i, j)` to `(28 - j, 28 - i)`, which in general gives a different
-contact map, so a structure and its chain reversal count as distinct structures (62 of
-them are their own reversal).
-
-Returns a [`StructureSet`](@ref). Each contact map lists its 28 contacts as rows `(i, j)`
-with `i < j`, sorted lexicographically. The enumeration order is deterministic. Takes
-about a second.
-
-The result is available pre-computed as [`STRUCTURES`](@ref), which is the default set of
-competing structures; this function is only needed to regenerate it.
-
-# References
-
-- Shakhnovich, E. I., and A. M. Gutin. "Enumeration of all compact conformations of
-  copolymers with random sequence of links." *The Journal of Chemical Physics* 93.8
-  (1990): 5967-5971.
-"""
-enumerate_structures() = StructureSet(compact_contact_maps())
+structure_index(S::StructureSet, s::Integer; from::StructureSet = STRUCTURES) = structure_index(S, contact_map(s; structures = from))
 
 """
     STRUCTURES
 
 The [`StructureSet`](@ref) of all 103,346 compact structures of a 27-mer on the 3×3×3
-cubic lattice, as generated by [`enumerate_structures`](@ref).
+cubic lattice (see [`contact_map`](@ref)), enumerated when the package is precompiled.
 
-This is the default set of competing structures in [`pnat`](@ref), [`metropolis!`](@ref)
-and related functions. See [`shakhnovich_structures`](@ref) for the representative subset
-of 10,000 structures used by Jacquin et al. (2016).
+This is the set of competing structures of the public API, and the default value of the
+internal keyword argument `structures`. See [`shakhnovich_structures`](@ref) for the
+representative subset of 10,000 structures used by Jacquin et al. (2016).
 """
-const STRUCTURES = enumerate_structures()
+const STRUCTURES = StructureSet(compact_contact_maps())
 
 """
     N_STRUCTURES
 
-Number of compact structures in [`STRUCTURES`](@ref) (103,346).
+Number of compact structures of a 27-mer on the 3×3×3 cubic lattice (103,346). Structures
+are referred to by their index in `1:N_STRUCTURES`; see [`contact_map`](@ref).
 """
 const N_STRUCTURES = length(STRUCTURES)
 
@@ -248,7 +239,7 @@ related functions to compete only against this set, as in those papers and in th
 structure A in this set.
 
 The contact maps are downloaded the first time this function is called, and the set is
-built once per session.
+built once per session. Internal: the public API is the model with all compact structures.
 
 # References
 
@@ -269,31 +260,31 @@ shakhnovich_structures() = shakhnovich_set()
 """
     STRUCTURE_A
 
-Index in [`STRUCTURES`](@ref) of reference structure A of Jacquin et al. (2016), which is
-structure 625 of [`shakhnovich_structures`](@ref).
+Index of reference structure A of Jacquin et al. (2016) among the `N_STRUCTURES` compact
+structures. It is structure 625 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_A = 22451
 
 """
     STRUCTURE_B
 
-Index in [`STRUCTURES`](@ref) of reference structure B of Jacquin et al. (2016), which is
-structure 848 of [`shakhnovich_structures`](@ref).
+Index of reference structure B of Jacquin et al. (2016) among the `N_STRUCTURES` compact
+structures. It is structure 848 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_B = 65036
 
 """
     STRUCTURE_C
 
-Index in [`STRUCTURES`](@ref) of reference structure C of Jacquin et al. (2016), which is
-structure 6683 of [`shakhnovich_structures`](@ref).
+Index of reference structure C of Jacquin et al. (2016) among the `N_STRUCTURES` compact
+structures. It is structure 6683 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_C = 66913
 
 """
     STRUCTURE_D
 
-Index in [`STRUCTURES`](@ref) of reference structure D of Jacquin et al. (2016), which is
-structure 6685 of [`shakhnovich_structures`](@ref).
+Index of reference structure D of Jacquin et al. (2016) among the `N_STRUCTURES` compact
+structures. It is structure 6685 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_D = 90697

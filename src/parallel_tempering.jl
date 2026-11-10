@@ -57,16 +57,13 @@ end
 
 """
     parallel_tempering(s; betas, nseqs=100, burnin=1000, thin=10, local_steps=10,
-                       initial_seqs=nothing, rng=default_rng(), structures=STRUCTURES,
-                       threaded=true, rng_mode=:per_temperature)
+                       initial_seqs=nothing, rng=default_rng(), threaded=true,
+                       rng_mode=:per_temperature)
 
-Sample sequences with replica exchange, targeting `pnat(s, seq; structures)^betas[end]`.
-`betas` must contain at least two finite, nonnegative, strictly increasing inverse
-selection temperatures (hot to cold). The physical folding temperature stays at 1;
-all 103,346 compact structures are included by default, just as in [`log_pnat`](@ref).
-Pass `structures=shakhnovich_structures()` for the 10,000-structure subset used by
-Jacquin et al. (2016). `s` indexes the selected set; use [`structure_index`](@ref) to
-translate it.
+Sample sequences with replica exchange, targeting `pnat(s, seq)^betas[end]` for the
+structure of index `s`. `betas` must contain at least two finite, nonnegative, strictly
+increasing inverse selection temperatures (hot to cold). The physical folding temperature
+stays at 1, and all 103,346 compact structures compete, just as in [`log_pnat`](@ref).
 
 One **round** performs `local_steps` Metropolis steps per replica (the moves of
 [`metropolis!`](@ref)), then proposes swaps on alternating disjoint adjacent edges. For

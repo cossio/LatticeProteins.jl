@@ -81,7 +81,8 @@ function walk!(
     return
 end
 
-# Contact maps of all maximally compact structures, see `enumerate_structures`: an array of
+# Contact maps of all maximally compact structures of a 27-mer, enumerated in a fixed
+# order (see the docstring of `contact_map` for what is enumerated). Returns an array of
 # size `(2, N_CONTACTS, nstructures)`, the layout of `StructureSet`.
 function compact_contact_maps()
     nbrs = lattice_neighbors()

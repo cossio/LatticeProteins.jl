@@ -57,7 +57,7 @@ function local_steps!(
 end
 
 """
-    metropolis!(seq, s; β = 1, nsteps = 1, structures = STRUCTURES, rng = default_rng())
+    metropolis!(seq, s; β = 1, nsteps = 1, rng = default_rng())
 
 Perform Metropolis Monte Carlo sampling on the amino acid sequence `seq`, targeting
 structure `s`. The sequence is mutated in place, and returned.
@@ -65,8 +65,8 @@ structure `s`. The sequence is mutated in place, and returned.
 Each step proposes to mutate a random position to a different amino acid, chosen
 uniformly among the other 19. The move is accepted or rejected using the Metropolis
 criterion with inverse temperature `β`, where the energy is
-`-log_pnat(s, seq; structures)`. The stationary distribution is thus proportional to
-`pnat(s, seq; structures)^β`.
+`-log_pnat(s, seq)`. The stationary distribution is thus proportional to
+`pnat(s, seq)^β`.
 
 The energies of `seq` in all structures are kept and updated incrementally after each
 mutation, so a step costs much less than a call to [`log_pnat`](@ref). They are computed
@@ -75,11 +75,9 @@ short ones.
 
 # Arguments
 - `seq`: integer-coded amino acid sequence of length 27 (values in `1:20`).
-- `s`: index of the target structure in `structures`.
+- `s`: index of the target structure, in `1:N_STRUCTURES`.
 - `β`: inverse temperature (higher values favor sequences that fold into `s`).
 - `nsteps`: number of Monte Carlo steps to perform.
-- `structures`: the [`StructureSet`](@ref) of competing structures, by default all compact
-  structures [`STRUCTURES`](@ref).
 - `rng`: random number generator.
 
 See also [`random_msa`](@ref), [`parallel_tempering`](@ref).
@@ -98,7 +96,7 @@ function metropolis!(
 end
 
 """
-    random_msa(s; nseqs = 1, β = 1, nsteps = 1000, structures = STRUCTURES, rng = default_rng())
+    random_msa(s; nseqs = 1, β = 1, nsteps = 1000, rng = default_rng())
 
 Generate a random multiple sequence alignment (MSA) of `nseqs` sequences that fold into
 structure `s`, using Metropolis Monte Carlo sampling.

@@ -36,7 +36,7 @@ end
 
     # the energy is the sum of the MJ interactions over the contacts of the structure
     for s in (STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D, 1, N_STRUCTURES)
-        cm = contact_map(STRUCTURES, s)
+        cm = contact_map(s)
         @test energy(s, seq) ≈ sum(MJ[seq[cm[k, 1]], seq[cm[k, 2]]] for k in axes(cm, 1)) rtol = 1.0e-14
     end
     @test energy(STRUCTURE_A, seq) != energy(STRUCTURE_D, seq)

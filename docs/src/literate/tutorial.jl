@@ -15,26 +15,23 @@
 # prefix.)
 
 using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts, AMINO_ACIDS,
-    metropolis!, random_msa, STRUCTURE_A, STRUCTURE_B,
-    STRUCTURES, shakhnovich_structures, contact_map, structure_index,
-    Hugo_MSA, Hugo_MSA_pnat
+    metropolis!, random_msa, contact_map, N_STRUCTURES, STRUCTURE_A, STRUCTURE_B
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
 # There are 103,346 maximally compact structures (counted up to rotations and reflections
-# of the cube), which the package enumerates when it is installed. They form the
-# [`StructureSet`](@ref) `STRUCTURES`:
+# of the cube), which the package enumerates when it is installed:
 
-STRUCTURES
+N_STRUCTURES
 
-# Structures are referred to by their index in a set. Four of them are highlighted in
-# Jacquin et al. (2016), and their indices are the constants `STRUCTURE_A`, `STRUCTURE_B`,
-# `STRUCTURE_C` and `STRUCTURE_D`:
+# Structures are referred to by their index, from 1 to `N_STRUCTURES`. Four of them are
+# highlighted in Jacquin et al. (2016), and their indices are the constants `STRUCTURE_A`,
+# `STRUCTURE_B`, `STRUCTURE_C` and `STRUCTURE_D`:
 
 STRUCTURE_A
 
 # The 28 contacts of structure A, as pairs of residue positions:
 
-contact_map(STRUCTURES, STRUCTURE_A)
+contact_map(STRUCTURE_A)
 
 # ## Encoding sequences
 #
@@ -106,22 +103,29 @@ pnat(STRUCTURE_A, s)
 # reproducible runs. For strong selection, where a single chain mixes slowly, see
 # [`parallel_tempering`](@ref).
 
-# ## The subset of 10,000 structures of Jacquin et al. (2016)
+# ## Internals: the model of Jacquin et al. (2016)
+#
+# !!! warning "Not part of the public API"
+#     This section uses internal names, which can change in any release. The public API
+#     is the model above, where all compact structures compete.
 #
 # Jacquin et al. (2016) restricted the competing structures to a representative subset of
 # 10,000 selected by the Shakhnovich group (Heo, Maslov & Shakhnovich 2011). The package
-# downloads it the first time [`shakhnovich_structures`](@ref) is called:
+# uses that model to check itself against published results, and downloads the subset the
+# first time [`shakhnovich_structures`](@ref) is called:
 
+using LatticeProteins: shakhnovich_structures, structure_index, Hugo_MSA, Hugo_MSA_pnat
 S10 = shakhnovich_structures()
 
-# All functions accept the set of competing structures through the `structures` keyword
-# argument. Structure indices refer to the set in use, and [`structure_index`](@ref)
-# translates between sets. Structure A is number 625 of the reference set:
+# The functions above accept the set of competing structures through the internal
+# `structures` keyword argument. Structure indices refer to the set in use, and
+# [`structure_index`](@ref) translates between sets. Structure A is number 625 of the
+# subset:
 
 a = structure_index(S10, STRUCTURE_A)
 
-# The reference set has fewer competitors, so folding probabilities computed against it
-# are higher than against all compact structures:
+# The subset has fewer competitors, so folding probabilities computed against it are
+# higher than against all compact structures:
 
 pnat(a, seq; structures = S10)
 
@@ -134,19 +138,9 @@ pnat(STRUCTURE_A, seq)
 msa_ref = random_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = S10)
 mean(pnat(a, col; structures = S10) for col in eachcol(msa_ref))
 
-# A set can also be built from any list of contact maps, for instance a toy model with two
-# structures of a single contact each:
-
-using LatticeProteins: StructureSet
-toy = StructureSet([[1 4], [1 6]])
-pnat(1, seq; structures = toy) + pnat(2, seq; structures = toy)
-
-# ## Reference datasets
-#
-# The package also bundles the reference multiple sequence alignments (MSAs) and
-# their folding probabilities from Jacquin et al. (2016), accessible with
-# [`Hugo_MSA`](@ref) and [`Hugo_MSA_pnat`](@ref). The folding probabilities were computed
-# against the subset of 10,000 structures:
+# The package also provides the reference multiple sequence alignments (MSAs) of Jacquin et
+# al. (2016) and their folding probabilities, with [`Hugo_MSA`](@ref) and
+# [`Hugo_MSA_pnat`](@ref). The folding probabilities were computed against the subset:
 
 sequences = Hugo_MSA(:A)
 length(sequences)
@@ -160,4 +154,4 @@ first(pnat_values, 5)
 
 pnat(a, potts(sequences[1]); structures = S10)
 
-# See the [Reference](@ref) for the complete list of available functions.
+# See the [Reference](@ref) for the complete public API.

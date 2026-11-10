@@ -73,7 +73,8 @@ with the package ([`Hugo_MSA`](@ref)`(:A)`) provides the published-model compari
 
 ## Version 1: against the subset of 10,000 structures
 
-This is the model of the paper: `structures = shakhnovich_structures()`. The alignment was
+This is the model of the paper, selected with the internal keyword argument
+`structures = shakhnovich_structures()`. The alignment was
 sampled with 4 chains of 9,000 recorded sequences each (36,000 before filtering).
 
 ![Fig. 4 reproduced against the subset of 10,000 structures](assets/tubiana2019_fig4_subset.jpg)

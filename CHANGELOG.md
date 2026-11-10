@@ -4,51 +4,53 @@ All notable changes to this project will be documented in this file. The format 
 
 ## 3.0.0
 
-The package now has a declared public API, built around a `StructureSet` type, and a
-single energy kernel shared by all samplers.
+The package now has a small declared public API, for the model in which all 103,346
+compact structures compete, and a single energy kernel shared by all samplers.
 
 ### Breaking
 
-- **Structure sets.** A set of competing structures is a `StructureSet`, built from a
-  vector of contact maps (`ncontacts × 2` matrices), instead of a bare
-  `(ncontacts, nstructures, 2)` array. `STRUCTURES` is a `StructureSet`, as is the value
-  of `enumerate_structures()`, and the `structures` keyword argument of every function
-  takes one. Use `length(S)` for the number of structures and `contact_map(S, s)` for
-  what was `S[:, s, :]`.
-- **The subset of 10,000 structures** is `shakhnovich_structures()` instead of the
-  constant `SHAKHNOVICH_STRUCTURES`. It is downloaded the first time it is requested,
-  no longer when the package is installed. `load_contact_maps` is removed.
+- **Public API.** The public names are declared `public`: `AMINO_ACIDS`, `L`, `potts`,
+  `aaseq`, `onehot`; `N_STRUCTURES`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`;
+  `MJ`, `energy`, `pnat`, `log_pnat`; `metropolis!`, `random_msa`, `parallel_tempering`.
+  Everything else is internal and can change in any release.
+- **Structures** are referred to by their index in `1:N_STRUCTURES`, and
+  `contact_map(s)` gives the contacts of structure `s`. The array `STRUCTURES` and the
+  function `enumerate_structures` are no longer part of the API.
 - **Reference structures.** `CONTACT_MAP_A`, ..., `CONTACT_MAP_D` are renamed
   `STRUCTURE_A`, ..., `STRUCTURE_D`: they are indices of structures, not contact maps.
+- **Other sets of competing structures are internal.** This covers the `structures`
+  keyword argument, the subset of 10,000 structures of Jacquin et al. (2016), now
+  `LatticeProteins.shakhnovich_structures()` instead of the constant
+  `SHAKHNOVICH_STRUCTURES`, `structure_index`, and the reference alignments
+  `Hugo_MSA`, `Hugo_MSA_pnat`, `Hugo_MSA_path`, which were sampled with that subset.
+  They remain available, and are used by the documentation and the tests, but without
+  stability guarantees. A set of structures is a `LatticeProteins.StructureSet`
+  instead of a bare `(ncontacts, nstructures, 2)` array. The subset is downloaded the
+  first time it is requested, no longer when the package is installed.
 - **`metropolis!` and `random_msa`** make the same moves as `parallel_tempering`: a step
   proposes one of the 19 *other* amino acids at a random position, where it used to
   propose any of the 20 (leaving the sequence unchanged one time in 20). The stationary
   distribution is the same; seeded trajectories differ from 2.x.
 - **Errors.** Invalid arguments throw an `ArgumentError`: sequences of the wrong length
-  or with amino acids outside `1:20` (previously an `AssertionError`), structure indices
-  outside the set (previously a `BoundsError`), and contact maps with residues outside
-  `1:27`, which `StructureSet` rejects on construction.
+  or with amino acids outside `1:20` (previously an `AssertionError`), and structure
+  indices outside `1:N_STRUCTURES` (previously a `BoundsError`).
 - **`potts`** throws an `ArgumentError` for characters outside `AMINO_ACIDS`, which it
   used to code silently as cysteine (index 1), and for sequences of unequal lengths.
-- **Removed** `load_miyazawa_jernigan_matrix` and `load_miyazawa_jernigan_aminoacids`:
-  use `MJ` and `AMINO_ACIDS`.
-- **Public API.** The names documented in the reference are declared `public`.
-  Everything else is internal and can change in any release.
+- **Removed** `load_contact_maps`, `load_miyazawa_jernigan_matrix` and
+  `load_miyazawa_jernigan_aminoacids`: use `MJ` and `AMINO_ACIDS`.
+- `energies` and `N_CONTACTS` are internal.
 
 | 2.x | 3.0 |
 |:--|:--|
-| `SHAKHNOVICH_STRUCTURES` | `shakhnovich_structures()` |
 | `CONTACT_MAP_A` | `STRUCTURE_A` |
-| `STRUCTURES[:, s, :]` | `contact_map(STRUCTURES, s)` |
-| `size(STRUCTURES, 2)` | `length(STRUCTURES)` |
-| `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)` | `structure_index(shakhnovich_structures(), STRUCTURE_A)` |
-| `structure_index(STRUCTURES, SHAKHNOVICH_STRUCTURES[:, s, :])` | `structure_index(STRUCTURES, s; from = shakhnovich_structures())` |
-| `pnat(cm, seq; structures = array)` | `pnat(s, seq; structures = StructureSet(contact_maps))` |
+| `STRUCTURES[:, s, :]` | `contact_map(s)` |
+| `size(STRUCTURES, 2)` | `N_STRUCTURES` |
+| `SHAKHNOVICH_STRUCTURES` | `LatticeProteins.shakhnovich_structures()` (internal) |
+| `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)` | `LatticeProteins.structure_index(LatticeProteins.shakhnovich_structures(), STRUCTURE_A)` (internal) |
 
 ### Added
 
-- `StructureSet`, `contact_map`, `shakhnovich_structures`, and the `from` keyword of
-  `structure_index`.
+- `contact_map`.
 - `metropolis!` and `random_msa` take a random number generator `rng`.
 - `parallel_tempering` has an explicit serial `rng_mode=:shared`, which uses a single
   RNG stream: a run can then be continued exactly from the final states of a previous
@@ -73,16 +75,14 @@ single energy kernel shared by all samplers.
   proposals as in 2.1.1, and can differ only if an acceptance test is decided by
   roundoff; the saved Tubiana alignment is reproduced exactly (checked on its first
   44,000 draws).
-- A structure set stores its per-site contact index, so sampling repeatedly on a set
-  other than `STRUCTURES` no longer rebuilds it on every call.
 - Structures are stored as `Int8`: the precompiled package is 8 MB instead of 52 MB.
 - `potts` of strings and `onehot` of a vector of strings are roughly 100 times faster
   on an alignment of 46,000 sequences.
 
 ### Fixed
 
-- `parallel_tempering` no longer reads out of bounds for structures with residues
-  outside `1:27` (`StructureSet` rejects them).
+- `parallel_tempering` no longer reads out of bounds when given (internally) structures
+  with residues outside `1:27`.
 
 ## 2.1.1
 

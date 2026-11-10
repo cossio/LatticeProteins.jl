@@ -2,6 +2,7 @@
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://cossio.github.io/LatticeProteins.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://cossio.github.io/LatticeProteins.jl/dev/)
+[![Coverage](https://codecov.io/gh/cossio/LatticeProteins.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/cossio/LatticeProteins.jl)
 
 Simulate the lattice proteins model on a 3×3×3 cubic lattice in Julia.
 

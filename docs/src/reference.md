@@ -11,17 +11,15 @@ LatticeProteins
 ## Public API
 
 The public API is the model in which all 103,346 compact structures of the lattice compete
-to fold a sequence. It consists of the names below. They are exported, except
-[`L`](@ref), which is declared `public` and accessed as `LatticeProteins.L`.
+to fold a sequence. It consists of the names below, which are exported.
 
 ### Sequences
 
 Sequences are strings of amino acids, integer-coded vectors ([`potts`](@ref)) or one-hot
 encoded arrays ([`onehot`](@ref)). Energies and samplers work with integer-coded
-sequences.
+sequences, of length 27.
 
 ```@docs
-L
 potts
 aaseq
 onehot
@@ -81,10 +79,11 @@ energies
 N_CONTACTS
 ```
 
-### Alphabet
+### Sequences
 
 ```@docs
 AMINO_ACIDS
+L
 ```
 
 ### Reference alignments of Jacquin et al. (2016)

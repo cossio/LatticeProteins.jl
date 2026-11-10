@@ -73,7 +73,6 @@ A structure is referred to by its index, from 1 to 103,346.
 | `onehot(seq)` | One-hot encode amino acid sequence(s) |
 | `potts(seq)` | Convert to integer-coded (Potts) representation: indices in the alphabet `"CMFILVWYAGTSNQDEHRKP-"` |
 | `aaseq(X)` | Convert from one-hot or integer coding back to amino acid string(s) |
-| `LatticeProteins.L` | Sequence length (27); public, but not exported |
 
 ### Sampling
 

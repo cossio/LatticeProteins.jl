@@ -9,9 +9,8 @@ determined by pairwise contacts using the Miyazawa-Jernigan interaction matrix. 
 probability that a sequence folds into a structure is a Boltzmann distribution over all
 103,346 compact structures of the lattice, which compete to fold the sequence.
 
-The public API is the list of exported names, plus the sequence length `L`, which is
-declared `public` but not exported (see `names(LatticeProteins)`). Everything else is
-internal and can change in any release.
+The public API is the list of exported names (see `names(LatticeProteins)`). Everything
+else is internal and can change in any release.
 
 # References
 
@@ -33,13 +32,11 @@ export enumerate_structures, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C,
 export MJ, energy, pnat, log_pnat
 # Sampling
 export metropolis!, sample_msa, parallel_tempering
-# A one-letter name would be a poor thing to bring into the namespace of every user.
-public L
 
 """
     L
 
-Sequence length for lattice proteins on the 3×3×3 cubic lattice (27).
+Sequence length for lattice proteins on the 3×3×3 cubic lattice (27). Internal.
 """
 const L = 27
 

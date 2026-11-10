@@ -11,9 +11,8 @@ compact structures compete, and a single energy kernel shared by all samplers.
 
 - **Public API.** The package now exports its public names: `potts`, `aaseq`, `onehot`;
   `enumerate_structures`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`; `MJ`, `energy`,
-  `pnat`, `log_pnat`; `metropolis!`, `sample_msa`, `parallel_tempering`. The sequence
-  length `L` is public but not exported. Everything else is internal and can change in
-  any release. Since 2.x exported nothing, `using LatticeProteins` now brings these
+  `pnat`, `log_pnat`; `metropolis!`, `sample_msa`, `parallel_tempering`. Everything else
+  is internal and can change in any release. Since 2.x exported nothing, `using LatticeProteins` now brings these
   names into scope.
 - **Structures.** `enumerate_structures()` returns the set of all compact structures,
   computed once, instead of recomputing an array at each call.

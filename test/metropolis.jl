@@ -1,5 +1,5 @@
 using Test: @test, @testset, @test_throws
-using LatticeProteins: LatticeProteins, random_msa, metropolis!, pnat, log_pnat, energies,
+using LatticeProteins: LatticeProteins, sample_msa, metropolis!, pnat, log_pnat, energies,
     structure_index, StructureSet, STRUCTURE_A, STRUCTURES, shakhnovich_structures, MJ, L
 using Random: Xoshiro, seed!, randexp
 
@@ -122,13 +122,13 @@ end
     @test maximum(abs, observed .- exact) < 0.015
 end
 
-@testset "random_msa" begin
-    msa = random_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
+@testset "sample_msa" begin
+    msa = sample_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
     @test msa isa Matrix{Int}
     @test size(msa) == (L, 5)
     @test all(1 .≤ msa .≤ 20)
-    @test msa == random_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
-    @test size(random_msa(STRUCTURE_A; nseqs = 0)) == (L, 0)
+    @test msa == sample_msa(STRUCTURE_A; nseqs = 5, β = 1, nsteps = 10, rng = Xoshiro(42))
+    @test size(sample_msa(STRUCTURE_A; nseqs = 0)) == (L, 0)
 
     # independent chains started from random sequences
     rng = Xoshiro(5)
@@ -136,8 +136,8 @@ end
     for n in 1:3
         naive_metropolis!(rng, view(seqs, :, n), A10; β = 10, nsteps = 50, structures = S10)
     end
-    @test random_msa(A10; nseqs = 3, β = 10, nsteps = 50, structures = S10, rng = Xoshiro(5)) == seqs
+    @test sample_msa(A10; nseqs = 3, β = 10, nsteps = 50, structures = S10, rng = Xoshiro(5)) == seqs
 
-    @test_throws ArgumentError random_msa(STRUCTURE_A; nseqs = -1)
-    @test_throws ArgumentError random_msa(0)
+    @test_throws ArgumentError sample_msa(STRUCTURE_A; nseqs = -1)
+    @test_throws ArgumentError sample_msa(0)
 end

@@ -73,11 +73,11 @@ log_pnat(STRUCTURE_A, seq)
 # ## Sampling sequences that fold
 #
 # We can search for sequences that fold into a target structure using Metropolis
-# Monte Carlo. [`random_msa`](@ref) starts from random sequences and evolves each one
+# Monte Carlo. [`sample_msa`](@ref) starts from random sequences and evolves each one
 # at inverse temperature `β`; a large `β` strongly favours sequences with high
 # folding probability for the target structure.
 
-msa = random_msa(STRUCTURE_A; nseqs = 20, β = 100, nsteps = 1000)
+msa = sample_msa(STRUCTURE_A; nseqs = 20, β = 100, nsteps = 1000)
 size(msa)
 
 # Each column of the returned matrix is an integer-coded sequence. The sampled
@@ -129,7 +129,7 @@ pnat(STRUCTURE_A, seq)
 
 # Sampling works the same way:
 
-msa_ref = random_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = S10)
+msa_ref = sample_msa(a; nseqs = 5, β = 100, nsteps = 200, structures = S10)
 mean(pnat(a, col; structures = S10) for col in eachcol(msa_ref))
 
 # The package also provides the reference multiple sequence alignments (MSAs) of Jacquin et

@@ -39,7 +39,7 @@ X = onehot("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
 s = aaseq(X)
 
 # Generate sequences that fold into structure A via Metropolis sampling
-msa = random_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
+msa = sample_msa(STRUCTURE_A; nseqs=100, β=100, nsteps=1000)
 
 # The 28 contacts of structure A, as pairs of residue positions
 cm = contact_map(STRUCTURE_A)
@@ -80,7 +80,7 @@ A structure is referred to by its index, from 1 to 103,346.
 | Function | Description |
 |----------|-------------|
 | `metropolis!(seq, s; β, nsteps, rng)` | In-place Metropolis sampling of a sequence |
-| `random_msa(s; nseqs, β, nsteps, rng)` | Generate a random MSA via Metropolis sampling |
+| `sample_msa(s; nseqs, β, nsteps, rng)` | Sample an MSA with independent Metropolis chains |
 | `parallel_tempering(s; betas, nseqs, burnin, thin, local_steps, rng, threaded)` | Replica-exchange sampling with swap and round-trip diagnostics |
 
 For strong selection, run replicas over a fixed ladder from weak to strong selection:

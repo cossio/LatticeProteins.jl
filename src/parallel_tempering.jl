@@ -108,7 +108,7 @@ Inspect swap acceptance, round trips, and agreement between independent runs.
 High folding probabilities or accepted swaps alone do not establish equilibrium.
 Tune the ladder in pilot runs, then hold it fixed for production sampling.
 
-See also [`metropolis!`](@ref), [`random_msa`](@ref).
+See also [`metropolis!`](@ref), [`sample_msa`](@ref).
 """
 function parallel_tempering(
         s::Integer; betas::AbstractVector{<:Real}, nseqs::Integer = 100,

@@ -11,7 +11,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
 
 - **Public API.** The package now exports its public names: `potts`, `aaseq`, `onehot`;
   `enumerate_structures`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`; `MJ`, `energy`,
-  `pnat`, `log_pnat`; `metropolis!`, `random_msa`, `parallel_tempering`. The sequence
+  `pnat`, `log_pnat`; `metropolis!`, `sample_msa`, `parallel_tempering`. The sequence
   length `L` is public but not exported. Everything else is internal and can change in
   any release. Since 2.x exported nothing, `using LatticeProteins` now brings these
   names into scope.
@@ -21,6 +21,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
   contacts of structure `s`; these replace `N_STRUCTURES` and indexing `STRUCTURES`.
 - **Reference structures.** `CONTACT_MAP_A`, ..., `CONTACT_MAP_D` are renamed
   `STRUCTURE_A`, ..., `STRUCTURE_D`: they are indices of structures, not contact maps.
+- **`random_msa` is renamed `sample_msa`.**
 - **The subset of 10,000 structures** of Jacquin et al. (2016) is not part of the public
   API, nor is anything that only serves it: the `structures` keyword argument,
   `structure_index`, and the reference alignments `Hugo_MSA`, `Hugo_MSA_pnat`,
@@ -29,7 +30,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
   the constant `SHAKHNOVICH_STRUCTURES`, a `LatticeProteins.StructureSet` instead of a
   bare `(ncontacts, nstructures, 2)` array, and is downloaded the first time it is
   requested instead of when the package is installed.
-- **`metropolis!` and `random_msa`** make the same moves as `parallel_tempering`: a step
+- **`metropolis!` and `sample_msa`** make the same moves as `parallel_tempering`: a step
   proposes one of the 19 *other* amino acids at a random position, where it used to
   propose any of the 20 (leaving the sequence unchanged one time in 20). The stationary
   distribution is the same; seeded trajectories differ from 2.x.
@@ -44,6 +45,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
 | 2.x | 3.0 |
 |:--|:--|
 | `CONTACT_MAP_A` | `STRUCTURE_A` |
+| `random_msa` | `sample_msa` |
 | `STRUCTURES[:, s, :]` | `contact_map(s)` |
 | `N_STRUCTURES`, `size(STRUCTURES, 2)` | `length(enumerate_structures())` |
 | `SHAKHNOVICH_STRUCTURES` | `LatticeProteins.shakhnovich_structures()` (internal) |
@@ -52,7 +54,7 @@ compact structures compete, and a single energy kernel shared by all samplers.
 ### Added
 
 - `contact_map`.
-- `metropolis!` and `random_msa` take a random number generator `rng`.
+- `metropolis!` and `sample_msa` take a random number generator `rng`.
 - `parallel_tempering` has an explicit serial `rng_mode=:shared`, which uses a single
   RNG stream: a run can then be continued exactly from the final states of a previous
   call. It is also the RNG protocol of v2.1.0 and of the saved Tubiana alignment.

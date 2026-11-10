@@ -8,7 +8,7 @@ import LatticeProteins
             :L, :potts, :aaseq, :onehot,
             :enumerate_structures, :contact_map, :STRUCTURE_A, :STRUCTURE_B, :STRUCTURE_C, :STRUCTURE_D,
             :MJ, :energy, :pnat, :log_pnat,
-            :metropolis!, :random_msa, :parallel_tempering,
+            :metropolis!, :sample_msa, :parallel_tempering,
         ]
     )
     @test Set(names(LatticeProteins)) == union(api, [:LatticeProteins])

@@ -32,7 +32,7 @@ export enumerate_structures, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C,
 # Energy and folding probability
 export MJ, energy, pnat, log_pnat
 # Sampling
-export metropolis!, random_msa, parallel_tempering
+export metropolis!, sample_msa, parallel_tempering
 # A one-letter name would be a poor thing to bring into the namespace of every user.
 public L
 

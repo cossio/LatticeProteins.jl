@@ -53,7 +53,7 @@ log_pnat
 
 ```@docs
 metropolis!
-random_msa
+sample_msa
 parallel_tempering
 ```
 

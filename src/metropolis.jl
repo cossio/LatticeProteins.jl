@@ -80,7 +80,7 @@ short ones.
 - `nsteps`: number of Monte Carlo steps to perform.
 - `rng`: random number generator.
 
-See also [`random_msa`](@ref), [`parallel_tempering`](@ref).
+See also [`sample_msa`](@ref), [`parallel_tempering`](@ref).
 """
 function metropolis!(
         seq::AbstractVector{<:Integer}, s::Integer; β::Real = 1, nsteps::Integer = 1,
@@ -96,19 +96,23 @@ function metropolis!(
 end
 
 """
-    random_msa(s; nseqs = 1, β = 1, nsteps = 1000, rng = default_rng())
+    sample_msa(s; nseqs = 1, β = 1, nsteps = 1000, rng = default_rng())
 
-Generate a random multiple sequence alignment (MSA) of `nseqs` sequences that fold into
-structure `s`, using Metropolis Monte Carlo sampling.
+Sample a multiple sequence alignment (MSA) of `nseqs` sequences that fold into structure
+`s`, using Metropolis Monte Carlo sampling.
 
 Each sequence is initialized randomly and then evolved independently for `nsteps`
 Metropolis steps at inverse temperature `β` (see [`metropolis!`](@ref)). Returns a
 `Matrix{Int}` of size `(27, nseqs)`, where each column is an integer-coded amino acid
 sequence.
 
+The sequences are independent, but each is a sample of the distribution `pnat(s, seq)^β`
+only if `nsteps` is long enough for a chain to equilibrate. At strong selection (large
+`β`) it is not, in practice: use [`parallel_tempering`](@ref).
+
 See also [`metropolis!`](@ref), [`parallel_tempering`](@ref).
 """
-function random_msa(
+function sample_msa(
         s::Integer; nseqs::Integer = 1, β::Real = 1, nsteps::Integer = 1000,
         structures::StructureSet = STRUCTURES, rng::AbstractRNG = default_rng()
     )

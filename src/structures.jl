@@ -48,10 +48,12 @@ end
 # over all self-avoiding continuations, pruning the ones that are not canonical. Complete
 # walks are converted to a contact map (flattened as `[i1, j1, i2, j2, ...]`) and appended
 # to `out`.
-function walk!(out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, used::UInt32,
-               depth::Int, nbrs::Vector{Vector{Int}}, stabilizer::Vector{Vector{Int}})
+function walk!(
+        out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, used::UInt32,
+        depth::Int, nbrs::Vector{Vector{Int}}, stabilizer::Vector{Vector{Int}}
+    )
     if depth == L
-        contacts = Tuple{Int,Int}[]
+        contacts = Tuple{Int, Int}[]
         for s in 1:L, u in nbrs[s]
             u > s || continue
             i, j = minmax(pos[s], pos[u])
@@ -76,6 +78,7 @@ function walk!(out::Vector{Vector{Int}}, path::Vector{Int}, pos::Vector{Int}, us
             end
         end
     end
+    return
 end
 
 """
@@ -124,14 +127,14 @@ function enumerate_structures()
 end
 
 # Validates an array of structures: `structures[:, s, :]` must be the contact pairs of structure `s`.
-function check_structures(structures::AbstractArray{Int,3})
-    @assert size(structures, 3) == 2 "structures must be an array of size (ncontacts, nstructures, 2)"
+function check_structures(structures::AbstractArray{Int, 3})
+    return @assert size(structures, 3) == 2 "structures must be an array of size (ncontacts, nstructures, 2)"
 end
 
 # Validates an integer-coded sequence.
 function check_sequence(seq::AbstractVector{Int})
     @assert length(seq) == L "sequence must have length $L"
-    @assert all(a -> 1 ≤ a ≤ 20, seq) "amino acid indices must be in 1:20"
+    return @assert all(a -> 1 ≤ a ≤ 20, seq) "amino acid indices must be in 1:20"
 end
 
 # Canonical representation of a contact map, independent of the order of the contacts and
@@ -156,7 +159,7 @@ a = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)  # 625: index of stru
 pnat(a, seq; structures = SHAKHNOVICH_STRUCTURES)
 ```
 """
-function structure_index(structures::AbstractArray{Int,3}, cm::AbstractMatrix{Int})
+function structure_index(structures::AbstractArray{Int, 3}, cm::AbstractMatrix{Int})
     check_structures(structures)
     key = contact_key(cm)
     length(key) == size(structures, 1) || return nothing
@@ -171,7 +174,7 @@ function structure_index(structures::AbstractArray{Int,3}, cm::AbstractMatrix{In
     return nothing
 end
 
-structure_index(structures::AbstractArray{Int,3}, cm::Int) = structure_index(structures, STRUCTURES[:, cm, :])
+structure_index(structures::AbstractArray{Int, 3}, cm::Int) = structure_index(structures, STRUCTURES[:, cm, :])
 
 """
     STRUCTURES

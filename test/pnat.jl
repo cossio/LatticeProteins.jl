@@ -8,16 +8,16 @@ const A10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
 const B10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_B)
 const C10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_C)
 const D10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_D)
-jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
+jacquin_pnat(cm, seq) = pnat(cm, seq; structures = SHAKHNOVICH_STRUCTURES)
 
 @testset "pnat" begin
     @testset "stable folding loss" begin
         # An independent high-precision sum checks both overflow protection and
         # cancellation for near-native sequences with a large energy offset.
-        for E in ([-1e12, -1e12 + 10], [-1e12, -1e12], [1000.0, -1000.0, 0.0])
+        for E in ([-1.0e12, -1.0e12 + 10], [-1.0e12, -1.0e12], [1000.0, -1000.0, 0.0])
             for cm in eachindex(E)
                 exact = Float64(log(sum(exp(BigFloat(E[cm]) - BigFloat(e)) for e in E)))
-                @test _folding_loss(E, cm) ≈ exact rtol=1e-13 atol=1e-15
+                @test _folding_loss(E, cm) ≈ exact rtol = 1.0e-13 atol = 1.0e-15
             end
         end
     end
@@ -41,14 +41,14 @@ jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
         @test energy(CONTACT_MAP_A, seq) == energy(CONTACT_MAP_A, seq)
 
         # the energy does not depend on the set the structure is taken from
-        @test energy(D10, seq; structures=SHAKHNOVICH_STRUCTURES) == E_D
+        @test energy(D10, seq; structures = SHAKHNOVICH_STRUCTURES) == E_D
 
         # sequence length must be 27
         @test_throws AssertionError energy(1, [1, 2, 3])
         # amino acid indices must be in 1:20
         @test_throws AssertionError energy(1, fill(21, 27))
         # structures must be an array of contact pairs
-        @test_throws AssertionError energy(1, seq; structures=zeros(Int, 28, 1, 3))
+        @test_throws AssertionError energy(1, seq; structures = zeros(Int, 28, 1, 3))
     end
 
     @testset "log_pnat" begin
@@ -60,7 +60,7 @@ jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
 
         # log_pnat for a sequence designed against the reference set should be close to 0
         # on that set
-        lp_good = log_pnat(D10, seq; structures=SHAKHNOVICH_STRUCTURES)
+        lp_good = log_pnat(D10, seq; structures = SHAKHNOVICH_STRUCTURES)
         @test lp_good > -1  # high pnat means log_pnat close to 0
 
         # sequence length must be 27
@@ -70,21 +70,21 @@ jacquin_pnat(cm, seq) = pnat(cm, seq; structures=SHAKHNOVICH_STRUCTURES)
     @testset "pnat - known values" begin
         # Reference values computed against the 10,000 structures of Jacquin et al. (2016)
         # From Lorenzo
-        @test jacquin_pnat(6685, potts("WRFQDPGRCEEEDERMCGPEMCRCRQK")) ≈ 0.995663 rtol=1e-6
-        @test jacquin_pnat(6685, potts("LEITKLEAVDDDRARFCQENLNGCKEQ")) ≈ 0.995402 rtol=1e-6
-        @test jacquin_pnat(6685, potts("FELHKLKGFDGSTASLIKESFNNWKED")) ≈ 0.994070 rtol=1e-6
+        @test jacquin_pnat(6685, potts("WRFQDPGRCEEEDERMCGPEMCRCRQK")) ≈ 0.995663 rtol = 1.0e-6
+        @test jacquin_pnat(6685, potts("LEITKLEAVDDDRARFCQENLNGCKEQ")) ≈ 0.995402 rtol = 1.0e-6
+        @test jacquin_pnat(6685, potts("FELHKLKGFDGSTASLIKESFNNWKED")) ≈ 0.99407 rtol = 1.0e-6
 
-        @test jacquin_pnat(848, potts("RNISIMHVVVDLLTELTIMVAEYPQFP")) ≈ 1.45048e-07 rtol=1e-5
-        @test jacquin_pnat(848, potts("RMMFFVPEMSKMGDFEHFKPEEYVAKW")) ≈ 0.988368 rtol=1e-6
-        @test jacquin_pnat(848, potts("TGWLEWDDFRRKETVDDHRECPIKECM")) ≈ 0.993085 rtol=1e-6
+        @test jacquin_pnat(848, potts("RNISIMHVVVDLLTELTIMVAEYPQFP")) ≈ 1.45048e-7 rtol = 1.0e-5
+        @test jacquin_pnat(848, potts("RMMFFVPEMSKMGDFEHFKPEEYVAKW")) ≈ 0.988368 rtol = 1.0e-6
+        @test jacquin_pnat(848, potts("TGWLEWDDFRRKETVDDHRECPIKECM")) ≈ 0.993085 rtol = 1.0e-6
 
-        @test jacquin_pnat(625, potts("HCEVAVLKVRIEDQYCDCHDRVHFCTE")) ≈ 0.989353 rtol=1e-6
+        @test jacquin_pnat(625, potts("HCEVAVLKVRIEDQYCDCHDRVHFCTE")) ≈ 0.989353 rtol = 1.0e-6
 
         # From Hugo
         @test jacquin_pnat(A10, potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")) ≈ 0.99463333079199023
         @test jacquin_pnat(A10, potts("EKALNPVDTECWKEYKKKMRPVMLDAR")) ≈ 0.99281733038613029
 
-        @test jacquin_pnat(B10, potts("PDRFIVQCLAQFEHFERDGDKDMRAEC")) ≈ 0.98672675809463950
+        @test jacquin_pnat(B10, potts("PDRFIVQCLAQFEHFERDGDKDMRAEC")) ≈ 0.9867267580946395
         @test jacquin_pnat(B10, potts("KEHVECDRIKPKEEVANDEDKDLKCDF")) ≈ 0.99837746142507167
 
         @test jacquin_pnat(C10, potts("ICEMDADLHCPKFPSFCRDWKAEKYEF")) ≈ 0.99411990031853326

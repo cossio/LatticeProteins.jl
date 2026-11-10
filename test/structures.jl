@@ -48,7 +48,7 @@ end
     @test any(structure_index(SHAKHNOVICH_STRUCTURES, STRUCTURES[:, s, :]) === nothing for s in 1:100)
     # the order of the contacts and the order within each pair are ignored
     cm = STRUCTURES[:, CONTACT_MAP_A, :]
-    @test structure_index(STRUCTURES, reverse(cm; dims=1)) == CONTACT_MAP_A
+    @test structure_index(STRUCTURES, reverse(cm; dims = 1)) == CONTACT_MAP_A
     @test structure_index(STRUCTURES, cm[:, [2, 1]]) == CONTACT_MAP_A
     # a contact map with a different number of contacts is never found
     @test structure_index(STRUCTURES, cm[1:27, :]) === nothing
@@ -61,17 +61,17 @@ end
     seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")
     a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
 
-    @test energy(a10, seq; structures=SHAKHNOVICH_STRUCTURES) == energy(CONTACT_MAP_A, seq)
+    @test energy(a10, seq; structures = SHAKHNOVICH_STRUCTURES) == energy(CONTACT_MAP_A, seq)
     E = energies(seq)
     @test E isa Vector{Float64}
     @test length(E) == N_STRUCTURES
     @test E[CONTACT_MAP_A] == energy(CONTACT_MAP_A, seq)
     @test E == [energy(s, seq) for s in 1:N_STRUCTURES]
-    E10 = energies(seq; structures=SHAKHNOVICH_STRUCTURES)
-    @test E10 == [energy(s, seq; structures=SHAKHNOVICH_STRUCTURES) for s in 1:10_000]
+    E10 = energies(seq; structures = SHAKHNOVICH_STRUCTURES)
+    @test E10 == [energy(s, seq; structures = SHAKHNOVICH_STRUCTURES) for s in 1:10_000]
 
     # the reference set is a subset of the full set, so pnat can only be lower with the full set
-    @test pnat(CONTACT_MAP_A, seq) < pnat(a10, seq; structures=SHAKHNOVICH_STRUCTURES)
+    @test pnat(CONTACT_MAP_A, seq) < pnat(a10, seq; structures = SHAKHNOVICH_STRUCTURES)
     @test log_pnat(CONTACT_MAP_A, seq) ≈ log(pnat(CONTACT_MAP_A, seq))
 
     # normalization: pnat is a probability distribution over structures
@@ -81,21 +81,21 @@ end
     @test pnat(CONTACT_MAP_A, seq) ≈ p[CONTACT_MAP_A]
 
     # the default is the full set
-    @test pnat(CONTACT_MAP_A, seq; structures=STRUCTURES) == pnat(CONTACT_MAP_A, seq)
-    @test log_pnat(CONTACT_MAP_A, seq; structures=STRUCTURES) == log_pnat(CONTACT_MAP_A, seq)
+    @test pnat(CONTACT_MAP_A, seq; structures = STRUCTURES) == pnat(CONTACT_MAP_A, seq)
+    @test log_pnat(CONTACT_MAP_A, seq; structures = STRUCTURES) == log_pnat(CONTACT_MAP_A, seq)
 end
 
 @testset "metropolis against the reference set" begin
     seed!(1)
     a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
     seq = rand(1:20, L)
-    pnat_before = pnat(a10, seq; structures=SHAKHNOVICH_STRUCTURES)
-    metropolis!(seq, a10; β=100, nsteps=500, structures=SHAKHNOVICH_STRUCTURES)
-    pnat_after = pnat(a10, seq; structures=SHAKHNOVICH_STRUCTURES)
+    pnat_before = pnat(a10, seq; structures = SHAKHNOVICH_STRUCTURES)
+    metropolis!(seq, a10; β = 100, nsteps = 500, structures = SHAKHNOVICH_STRUCTURES)
+    pnat_after = pnat(a10, seq; structures = SHAKHNOVICH_STRUCTURES)
     @test all(1 .≤ seq .≤ 20)
     @test pnat_after > pnat_before
 
-    msa = random_msa(a10; nseqs=2, β=100, nsteps=50, structures=SHAKHNOVICH_STRUCTURES)
+    msa = random_msa(a10; nseqs = 2, β = 100, nsteps = 50, structures = SHAKHNOVICH_STRUCTURES)
     @test size(msa) == (L, 2)
     @test all(1 .≤ msa .≤ 20)
 end

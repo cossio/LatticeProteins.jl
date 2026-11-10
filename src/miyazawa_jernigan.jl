@@ -11,7 +11,7 @@ excluding the gap character).
 Returns a `Matrix{T}`.
 """
 function load_miyazawa_jernigan_matrix(::Type{T} = Float64) where {T}
-    readdlm(joinpath(MJ_DIR, "MJ.txt"), T)
+    return readdlm(joinpath(MJ_DIR, "MJ.txt"), T)
 end
 
 """
@@ -21,7 +21,7 @@ Load the amino acid ordering used in the Miyazawa-Jernigan matrix file.
 Returns a `String` of single-letter amino acid codes.
 """
 function load_miyazawa_jernigan_aminoacids()
-    readline(joinpath(MJ_DIR, "AAs.txt"))
+    return readline(joinpath(MJ_DIR, "AAs.txt"))
 end
 
 """

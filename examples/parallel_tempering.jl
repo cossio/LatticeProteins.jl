@@ -19,7 +19,7 @@ using TOML: print as print_toml
 const LP = LatticeProteins
 
 function save_csv(path, header, rows)
-    open(path, "w") do io
+    return open(path, "w") do io
         println(io, join(header, ','))
         writedlm(io, rows, ',')
     end
@@ -61,34 +61,51 @@ function main(args)
     cm = which == "all" ? CONTACT_MAP_A : structure_index(structures, CONTACT_MAP_A)
     runs > 0 && burnin >= 0 && nseqs > 0 && thin > 0 || error("invalid run lengths")
     local_steps = 10
-    betas = [0.0; exp.(range(log(0.1), log(3000.0); length=31))]
+    betas = [0.0; exp.(range(log(0.1), log(3000.0); length = 31))]
     betas[end] = 3000.0
     mkdir(out)
     initial = [rand(Xoshiro(1000 + run), 1:20, L, length(betas)) for run in 1:runs]
-    summaries = Vector{Dict{String,Any}}(undef, 2runs)
+    summaries = Vector{Dict{String, Any}}(undef, 2runs)
     Threads.@threads for job in 1:2runs
         run = (job + 1) ÷ 2
         seed = 2000 + run
         if isodd(job)
             # Independent jobs already run in parallel; keep each ladder serial.
-            elapsed = @elapsed r = parallel_tempering(cm; betas, burnin,
-                nseqs, thin, local_steps, structures, initial_seqs=initial[run],
-                rng=Xoshiro(seed), threaded=false)
-            rows = [(sample * thin, exp(r.log_pnat[end, sample]), r.replica_ids[end, sample],
-                     aaseq(r.samples[:, sample])) for sample in 1:nseqs]
-            save_csv(joinpath(out, "pt_$(run)_cold.csv"),
-                ["production_round", "pnat", "replica_id", "sequence"], rows)
-            save_csv(joinpath(out, "pt_$(run)_trace.csv"),
+            elapsed = @elapsed r = parallel_tempering(
+                cm; betas, burnin,
+                nseqs, thin, local_steps, structures, initial_seqs = initial[run],
+                rng = Xoshiro(seed), threaded = false
+            )
+            rows = [
+                (
+                        sample * thin, exp(r.log_pnat[end, sample]), r.replica_ids[end, sample],
+                        aaseq(r.samples[:, sample]),
+                    ) for sample in 1:nseqs
+            ]
+            save_csv(
+                joinpath(out, "pt_$(run)_cold.csv"),
+                ["production_round", "pnat", "replica_id", "sequence"], rows
+            )
+            save_csv(
+                joinpath(out, "pt_$(run)_trace.csv"),
                 ["production_round", "temperature_index", "beta", "pnat", "replica_id"],
-                [(sample * thin, i, betas[i], exp(r.log_pnat[i, sample]), r.replica_ids[i, sample])
-                 for sample in 1:nseqs for i in eachindex(betas)])
+                [
+                    (sample * thin, i, betas[i], exp(r.log_pnat[i, sample]), r.replica_ids[i, sample])
+                        for sample in 1:nseqs for i in eachindex(betas)
+                ]
+            )
             d = r.diagnostics
             rates = d.swap_accepts ./ d.swap_attempts
-            save_csv(joinpath(out, "pt_$(run)_swaps.csv"),
+            save_csv(
+                joinpath(out, "pt_$(run)_swaps.csv"),
                 ["beta_hot", "beta_cold", "attempts", "accepts", "acceptance"],
-                [(betas[i], betas[i+1], d.swap_attempts[i], d.swap_accepts[i], rates[i])
-                 for i in eachindex(rates)])
-            summaries[job] = Dict("method" => "parallel_tempering", "run" => run,
+                [
+                    (betas[i], betas[i + 1], d.swap_attempts[i], d.swap_accepts[i], rates[i])
+                        for i in eachindex(rates)
+                ]
+            )
+            summaries[job] = Dict(
+                "method" => "parallel_tempering", "run" => run,
                 "seed" => seed, "seconds" => elapsed,
                 "pnat_min" => minimum(exp.(r.log_pnat[end, :])),
                 "pnat_max" => maximum(exp.(r.log_pnat[end, :])),
@@ -97,29 +114,38 @@ function main(args)
                 "round_trips" => d.round_trips,
                 "burnin_round_trips" => r.burnin_diagnostics.round_trips,
                 "swap_acceptance_min" => minimum(rates),
-                "swap_acceptance_max" => maximum(rates))
+                "swap_acceptance_max" => maximum(rates)
+            )
             println("PT run=$run mean_pnat=$(summaries[job]["pnat_mean"]) round_trips=$(sum(d.round_trips)) seconds=$elapsed")
         else
             elapsed = @elapsed ps = controls(initial[run], seed, burnin, nseqs, thin, local_steps, cm, structures)
-            save_csv(joinpath(out, "control_$(run)_trace.csv"),
+            save_csv(
+                joinpath(out, "control_$(run)_trace.csv"),
                 ["production_round", "chain", "pnat"],
-                [(sample * thin, i, ps[i, sample]) for sample in 1:nseqs for i in axes(ps, 1)])
-            summaries[job] = Dict("method" => "metropolis_control", "run" => run,
+                [(sample * thin, i, ps[i, sample]) for sample in 1:nseqs for i in axes(ps, 1)]
+            )
+            summaries[job] = Dict(
+                "method" => "metropolis_control", "run" => run,
                 "seed" => seed, "seconds" => elapsed, "pnat_min" => minimum(ps),
                 "pnat_max" => maximum(ps), "pnat_mean" => sum(ps) / length(ps),
-                "final_pnat" => ps[:, end])
+                "final_pnat" => ps[:, end]
+            )
         end
         flush(stdout)
     end
     open(joinpath(out, "summary.toml"), "w") do io
-        print_toml(io, Dict("structure" => cm, "structure_set" => which,
-            "nstructures" => size(structures, 2), "betas" => betas,
-            "runs" => runs, "burnin_rounds" => burnin, "nseqs" => nseqs,
-            "thin_rounds" => thin, "local_steps" => local_steps,
-            "proposals_per_method_per_run" => length(betas) * (burnin + nseqs * thin) * local_steps,
-            "julia_version" => string(VERSION), "results" => summaries))
+        print_toml(
+            io, Dict(
+                "structure" => cm, "structure_set" => which,
+                "nstructures" => size(structures, 2), "betas" => betas,
+                "runs" => runs, "burnin_rounds" => burnin, "nseqs" => nseqs,
+                "thin_rounds" => thin, "local_steps" => local_steps,
+                "proposals_per_method_per_run" => length(betas) * (burnin + nseqs * thin) * local_steps,
+                "julia_version" => string(VERSION), "results" => summaries
+            )
+        )
     end
-    println("Results written to $out")
+    return println("Results written to $out")
 end
 
 main(ARGS)

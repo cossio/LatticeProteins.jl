@@ -29,7 +29,7 @@ See also [`Hugo_MSA_pnat`](@ref), [`Hugo_MSA_path`](@ref).
 """
 function Hugo_MSA(which::Symbol)
     path = Hugo_MSA_path(which)
-    return string.(readdlm(path)[:,3])
+    return string.(readdlm(path)[:, 3])
 end
 
 """
@@ -45,5 +45,5 @@ See also [`Hugo_MSA`](@ref).
 """
 function Hugo_MSA_pnat(which::Symbol)
     path = Hugo_MSA_path(which)
-    return Float64.(readdlm(path)[:,2])
+    return Float64.(readdlm(path)[:, 2])
 end

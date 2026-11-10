@@ -9,7 +9,7 @@ integer amino acid indices in `1:20`. `cm` is the index of the structure in `str
 which defaults to all compact structures [`STRUCTURES`](@ref) and can be set to the
 subset [`SHAKHNOVICH_STRUCTURES`](@ref).
 """
-function energy(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES)
+function energy(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int, 3} = STRUCTURES)
     check_sequence(seq)
     check_structures(structures)
     checkbounds(structures, :, cm, :)
@@ -18,7 +18,7 @@ end
 
 # Contact energy of `seq` in structure `s` of `structures`. Assumes `seq` has been validated
 # with `check_sequence` and that `s` is a valid structure index.
-function structure_energy(seq::AbstractVector{Int}, structures::AbstractArray{Int,3}, s::Int)
+function structure_energy(seq::AbstractVector{Int}, structures::AbstractArray{Int, 3}, s::Int)
     e = 0.0
     for k in axes(structures, 1)
         @inbounds i, j = structures[k, s, 1], structures[k, s, 2]
@@ -37,7 +37,7 @@ length `size(structures, 2)`. Equivalent to `[energy(s, seq; structures) for s i
 
 See also [`energy`](@ref).
 """
-function energies(seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES)
+function energies(seq::AbstractVector{Int}; structures::AbstractArray{Int, 3} = STRUCTURES)
     check_sequence(seq)
     check_structures(structures)
     return energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures)
@@ -45,7 +45,7 @@ end
 
 # Writes the energies of `seq` in all `structures` into `E`. Assumes `seq` and `structures`
 # have been validated with `check_sequence` and `check_structures`.
-function energies!(E::Vector{Float64}, seq::AbstractVector{Int}, structures::AbstractArray{Int,3})
+function energies!(E::Vector{Float64}, seq::AbstractVector{Int}, structures::AbstractArray{Int, 3})
     @assert length(E) == size(structures, 2)
     for s in axes(structures, 2)
         E[s] = structure_energy(seq, structures, s)
@@ -85,7 +85,7 @@ subset of 10,000 structures used by Jacquin et al. (2016) (see
 
 See also [`pnat`](@ref), [`energy`](@ref).
 """
-function log_pnat(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES)
+function log_pnat(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int, 3} = STRUCTURES)
     E = energies(seq; structures)
     return -_folding_loss(E, cm)
 end
@@ -98,4 +98,4 @@ Equivalent to `exp(log_pnat(cm, seq; structures))`.
 
 See also [`log_pnat`](@ref).
 """
-pnat(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int,3} = STRUCTURES) = exp(log_pnat(cm, seq; structures))
+pnat(cm::Int, seq::AbstractVector{Int}; structures::AbstractArray{Int, 3} = STRUCTURES) = exp(log_pnat(cm, seq; structures))

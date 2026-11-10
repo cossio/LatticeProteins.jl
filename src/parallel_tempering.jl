@@ -21,7 +21,7 @@ mutable struct _IntegerTemperingReplica
     boltzmann::Vector{Float64}
 end
 
-function _integer_energy_grid(ncontacts, interactions=MJ)
+function _integer_energy_grid(ncontacts, interactions = MJ)
     all(isfinite, interactions) || return nothing
     maximum(abs, interactions) <= typemax(Int32) / 100 || return nothing
     grid = round.(Int32, 100 .* interactions)
@@ -38,7 +38,7 @@ function _integer_energies!(energies, seq, structures, interactions)
     @inbounds for s in axes(structures, 2)
         value = Int32(0)
         for k in axes(structures, 1)
-            value += interactions[seq[structures[k,s,1]], seq[structures[k,s,2]]]
+            value += interactions[seq[structures[k, s, 1]], seq[structures[k, s, 2]]]
         end
         energies[s] = value
     end
@@ -55,22 +55,24 @@ function _integer_folding_loss(energies, cm, boltzmann)
 end
 
 function _IntegerTemperingReplica(seq, cm, id, structures, interactions, boltzmann)
-    E = _integer_energies!(Vector{Int32}(undef, size(structures,2)), seq, structures, interactions)
-    return _IntegerTemperingReplica(copy(seq), E, similar(E),
-        _integer_folding_loss(E, cm, boltzmann), id, interactions, boltzmann)
+    E = _integer_energies!(Vector{Int32}(undef, size(structures, 2)), seq, structures, interactions)
+    return _IntegerTemperingReplica(
+        copy(seq), E, similar(E),
+        _integer_folding_loss(E, cm, boltzmann), id, interactions, boltzmann
+    )
 end
 
 function _integer_mutate_energies!(replica, i, aa, sites)
     copyto!(replica.trial, replica.energies)
     old = replica.seq[i]
-    delta = ntuple(b -> replica.interactions[aa,b] - replica.interactions[old,b], Val(20))
-    @inbounds for t in sites.offsets[i]:(sites.offsets[i+1]-1)
+    delta = ntuple(b -> replica.interactions[aa, b] - replica.interactions[old, b], Val(20))
+    @inbounds for t in sites.offsets[i]:(sites.offsets[i + 1] - 1)
         replica.trial[sites.structure[t]] += delta[replica.seq[sites.partner[t]]]
     end
     return replica.trial
 end
 
-function _TemperingReplica(seq, cm, id, structures=STRUCTURES)
+function _TemperingReplica(seq, cm, id, structures = STRUCTURES)
     E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures)
     return _TemperingReplica(copy(seq), E, similar(E), _folding_loss(E, cm), id)
 end
@@ -114,24 +116,26 @@ end
 
 function _refresh_tempering!(replica, cm, structures)
     energies!(replica.energies, replica.seq, structures)
-    replica.loss = _folding_loss(replica.energies, cm)
+    return replica.loss = _folding_loss(replica.energies, cm)
 end
 
 function _refresh_tempering!(replica::_IntegerTemperingReplica, cm, structures)
     _integer_energies!(replica.energies, replica.seq, structures, replica.interactions)
-    replica.loss = _integer_folding_loss(replica.energies, cm, replica.boltzmann)
+    return replica.loss = _integer_folding_loss(replica.energies, cm, replica.boltzmann)
 end
 
 # Threaded slots exclusively own their RNG, replica, and counters during this phase.
 # The shared-RNG protocol is restricted to the serial path.
 # The threaded loop joins before any serial swaps or endpoint bookkeeping.
-function _tempering_sweep!(rngs, replicas, cm, betas, nsteps, sites, structures,
-                           counts, refresh, threaded)
+function _tempering_sweep!(
+        rngs, replicas, cm, betas, nsteps, sites, structures,
+        counts, refresh, threaded
+    )
     function update_slot!(i)
         replica = replicas[i]
         counts.local_attempts[i] += nsteps
         counts.local_accepts[i] += _tempering_local!(rngs[i], replica, cm, betas[i], nsteps, sites)
-        if refresh
+        return if refresh
             _refresh_tempering!(replica, cm, structures)
         end
     end
@@ -161,9 +165,11 @@ function _tempering_swap!(rng, replicas, betas, i)
     return false
 end
 
-_tempering_counts(n) = (local_attempts=zeros(Int, n), local_accepts=zeros(Int, n),
-    swap_attempts=zeros(Int, n - 1), swap_accepts=zeros(Int, n - 1),
-    round_trips=zeros(Int, n))
+_tempering_counts(n) = (
+    local_attempts = zeros(Int, n), local_accepts = zeros(Int, n),
+    swap_attempts = zeros(Int, n - 1), swap_accepts = zeros(Int, n - 1),
+    round_trips = zeros(Int, n),
+)
 
 function _record_endpoints!(stages, trips, replicas)
     hot, cold = first(replicas).id, last(replicas).id
@@ -243,12 +249,14 @@ Tune the ladder in pilot runs, then hold it fixed for production sampling.
 
 See also [`metropolis!`](@ref), [`random_msa`](@ref).
 """
-function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=100,
-    burnin::Int=1000, thin::Int=10, local_steps::Int=10,
-    initial_seqs::Union{Nothing,AbstractMatrix{Int}}=nothing,
-    rng::AbstractRNG=default_rng(), structures::AbstractArray{Int,3}=STRUCTURES,
-    energy_cache::Symbol=:auto, threaded::Bool=true,
-    rng_mode::Symbol=:per_temperature)
+function parallel_tempering(
+        cm::Int; betas::AbstractVector{<:Real}, nseqs::Int = 100,
+        burnin::Int = 1000, thin::Int = 10, local_steps::Int = 10,
+        initial_seqs::Union{Nothing, AbstractMatrix{Int}} = nothing,
+        rng::AbstractRNG = default_rng(), structures::AbstractArray{Int, 3} = STRUCTURES,
+        energy_cache::Symbol = :auto, threaded::Bool = true,
+        rng_mode::Symbol = :per_temperature
+    )
 
     check_structures(structures)
     1 <= cm <= size(structures, 2) || throw(ArgumentError("invalid target structure"))
@@ -271,7 +279,7 @@ function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=1
         size(initial_seqs) == (L, n) || throw(ArgumentError("initial_seqs must have size (27, length(betas))"))
         all(a -> 1 <= a <= 20, initial_seqs) || throw(ArgumentError("residues must be in 1:20"))
     end
-    grid = energy_cache == :float ? nothing : _integer_energy_grid(size(structures,1))
+    grid = energy_cache == :float ? nothing : _integer_energy_grid(size(structures, 1))
     energy_cache == :integer && grid === nothing &&
         throw(ArgumentError("interaction matrix/structure size is not eligible for integer caching"))
     replicas = if grid === nothing
@@ -287,16 +295,20 @@ function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=1
     ids = Matrix{Int}(undef, n, nseqs)
     burnin_diagnostics, diagnostics = _tempering_counts(n), _tempering_counts(n)
     round_index = 0
-    for (rounds, counts, production) in ((burnin, burnin_diagnostics, false),
-                                        (nseqs * thin, diagnostics, true))
+    for (rounds, counts, production) in (
+            (burnin, burnin_diagnostics, false),
+            (nseqs * thin, diagnostics, true),
+        )
         stages = zeros(Int, n)
         _record_endpoints!(stages, counts.round_trips, replicas)
         for step in 1:rounds
             round_index += 1
-            _tempering_sweep!(rngs, replicas, cm, betas, local_steps, sites, structures,
-                              counts, round_index % 100 == 0, threaded)
+            _tempering_sweep!(
+                rngs, replicas, cm, betas, local_steps, sites, structures,
+                counts, round_index % 100 == 0, threaded
+            )
             first_edge = n == 2 || isodd(round_index) ? 1 : 2
-            for i in first_edge:2:n-1
+            for i in first_edge:2:(n - 1)
                 counts.swap_attempts[i] += 1
                 counts.swap_accepts[i] += _tempering_swap!(rng, replicas, betas, i)
             end
@@ -311,7 +323,9 @@ function parallel_tempering(cm::Int; betas::AbstractVector{<:Real}, nseqs::Int=1
             end
         end
     end
-    return (; samples, betas, energy_cache=used_cache, rng_mode, log_pnat=trace, replica_ids=ids,
-        final_seqs=stack(r.seq for r in replicas),
-        final_log_pnat=[-r.loss for r in replicas], burnin_diagnostics, diagnostics)
+    return (;
+        samples, betas, energy_cache = used_cache, rng_mode, log_pnat = trace, replica_ids = ids,
+        final_seqs = stack(r.seq for r in replicas),
+        final_log_pnat = [-r.loss for r in replicas], burnin_diagnostics, diagnostics,
+    )
 end

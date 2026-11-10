@@ -6,7 +6,7 @@ using Statistics: mean
 
 # The pnat values in the Hugo MSA files were computed against the 10,000 reference
 # structures of Jacquin et al. (2016).
-jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures=SHAKHNOVICH_STRUCTURES)
+jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures = SHAKHNOVICH_STRUCTURES)
 
 @testset "Hugo_MSAs" begin
     @testset "Hugo_MSA_path" begin
@@ -19,8 +19,10 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
     end
 
     @testset "Hugo_MSA loading" begin
-        for (sym, cm) in [(:A, CONTACT_MAP_A), (:B, CONTACT_MAP_B),
-                          (:C, CONTACT_MAP_C), (:D, CONTACT_MAP_D)]
+        for (sym, cm) in [
+                (:A, CONTACT_MAP_A), (:B, CONTACT_MAP_B),
+                (:C, CONTACT_MAP_C), (:D, CONTACT_MAP_D),
+            ]
             msa = Hugo_MSA(sym)
             pnats = Hugo_MSA_pnat(sym)
 
@@ -41,8 +43,8 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
         msa_A = Hugo_MSA(:A)
         pnat_A = Hugo_MSA_pnat(:A)
         a10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
-        for i = 1:100
-            @test pnat(a10, potts(msa_A[i]); structures=SHAKHNOVICH_STRUCTURES) ≈ pnat_A[i]
+        for i in 1:100
+            @test pnat(a10, potts(msa_A[i]); structures = SHAKHNOVICH_STRUCTURES) ≈ pnat_A[i]
         end
     end
 
@@ -50,8 +52,8 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
         msa_B = Hugo_MSA(:B)
         pnat_B = Hugo_MSA_pnat(:B)
         b10 = structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_B)
-        for i = 1:100
-            @test pnat(b10, potts(msa_B[i]); structures=SHAKHNOVICH_STRUCTURES) ≈ pnat_B[i]
+        for i in 1:100
+            @test pnat(b10, potts(msa_B[i]); structures = SHAKHNOVICH_STRUCTURES) ≈ pnat_B[i]
         end
     end
 
@@ -63,7 +65,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
         @test size(X, 3) == length(msa_A)
 
         # Mean one-hot should have values in [0, 1]
-        m = mean(X; dims=3)
+        m = mean(X; dims = 3)
         @test all(0 .≤ m .≤ 1)
     end
 end

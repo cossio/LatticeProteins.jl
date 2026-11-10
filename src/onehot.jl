@@ -56,7 +56,7 @@ function aaseq(X::Union{BitMatrix, BitArray{3}})
 end
 
 aaseq(P::AbstractVector{Int}) = join([AMINO_ACIDS[i] for i in P])
-aaseq(P::AbstractMatrix{Int}) = [aaseq(view(P,:,n)) for n in axes(P, 2)]
+aaseq(P::AbstractMatrix{Int}) = [aaseq(view(P, :, n)) for n in axes(P, 2)]
 
 """
     potts(X::BitMatrix)
@@ -70,6 +70,6 @@ taking the `argmax` along the first dimension.
 Convert amino acid string(s) to integer-coded (Potts) representation, using the
 [`AMINO_ACIDS`](@ref) alphabet ordering.
 """
-potts(X::BitMatrix) = vec(Int.(first.(Tuple.(argmax(X; dims=1)))))
-potts(X::BitArray{3}) = reshape(Int.(first.(Tuple.(argmax(X; dims=1)))), size(X,2), size(X,3))
+potts(X::BitMatrix) = vec(Int.(first.(Tuple.(argmax(X; dims = 1)))))
+potts(X::BitArray{3}) = reshape(Int.(first.(Tuple.(argmax(X; dims = 1)))), size(X, 2), size(X, 3))
 potts(s::Union{AbstractString, AbstractVector{<:AbstractString}}) = potts(onehot(s))

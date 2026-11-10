@@ -24,9 +24,9 @@ const A10 = structure_index(S, CONTACT_MAP_A)
 function fig4_statistics(seqs::AbstractMatrix{Int})
     M = size(seqs, 2)
     X = Float64.(reshape(onehot(seqs)[1:20, :, :], 20 * L, M))
-    f = reshape(mean(X; dims=2), 20, L)
+    f = reshape(mean(X; dims = 2), 20, L)
     cons = [log(20) + sum(p > 0 ? p * log(p) : 0.0 for p in f[:, i]) for i in 1:L]
-    Xc = X .- mean(X; dims=2)
+    Xc = X .- mean(X; dims = 2)
     w = eigen(Symmetric(Xc * Xc' / M)).vectors[:, end]
     cm = S[:, A10, :]
     C = zeros(20, 20)
@@ -59,16 +59,16 @@ end
     pnats = zeros(nchains * nsamples)
     for c in 1:nchains
         seq = rand(1:20, L)
-        metropolis!(seq, A10; β=1000, nsteps=10_000, structures=S) # burn-in
+        metropolis!(seq, A10; β = 1000, nsteps = 10_000, structures = S) # burn-in
         for t in 1:nsamples
-            metropolis!(seq, A10; β=1000, nsteps=1_000, structures=S)
+            metropolis!(seq, A10; β = 1000, nsteps = 1_000, structures = S)
             k = (c - 1) * nsamples + t
             fresh[:, k] = seq
-            pnats[k] = exp(log_pnat(A10, seq; structures=S))
+            pnats[k] = exp(log_pnat(A10, seq; structures = S))
         end
     end
     # at β = 1000 the chains sample sequences folding into A with probability ≈ 0.995
-    @test mean(pnats) ≈ mean(pn) atol=0.003
+    @test mean(pnats) ≈ mean(pn) atol = 0.003
     @test all(pnats .> 0.97)
     fresh = fresh[:, pnats .> 0.995]
     @test size(fresh, 2) > 150
@@ -83,7 +83,7 @@ end
     # panel (e): first principal component (up to sign)
     @test abs(dot(vec(w), vec(w_ref))) / (norm(w) * norm(w_ref)) > 0.85
     # panel (g): both subfamilies (the two modes of the projection on PC1) are sampled
-    center = vec(mean(Float64.(reshape(onehot(ref)[1:20, :, :], 20 * L, :)); dims=2))
+    center = vec(mean(Float64.(reshape(onehot(ref)[1:20, :, :], 20 * L, :)); dims = 2))
     proj = (Float64.(reshape(onehot(fresh)[1:20, :, :], 20 * L, :)) .- center)' * vec(w_ref)
     @test 0.2 < mean(proj .> 0) < 0.85
     # panel (f): average covariance between amino acids on contacting sites

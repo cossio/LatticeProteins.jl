@@ -8,7 +8,7 @@ using Random: seed!
 
 # The Hugo MSAs and their pnat values were computed against the 10,000 reference
 # structures of Jacquin et al. (2016).
-jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures=SHAKHNOVICH_STRUCTURES)
+jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; structures = SHAKHNOVICH_STRUCTURES)
 
 # Tests based on properties from:
 #   Jacquin, Hugo, et al. "Benchmarking inverse statistical approaches for protein
@@ -20,10 +20,12 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
         # pnat defines a probability distribution over structures for any sequence.
         # Compute the full energy vector once, derive the normalized probabilities,
         # and verify both normalization and a few representative pnat values.
-        for seq_str in ["EKAMPAMDPDMAHEHKKKIRAWMFEGE",  # Hugo MSA A
-                        "PDRFIVQCLAQFEHFERDGDKDMRAEC",  # Hugo MSA B
-                        "WRFQDPGRCEEEDERMCGPEMCRCRQK",  # Hugo MSA D
-                        "CMFILVWYAGTSNQDEHRKPCMFILVW"]  # arbitrary sequence
+        for seq_str in [
+                "EKAMPAMDPDMAHEHKKKIRAWMFEGE",  # Hugo MSA A
+                "PDRFIVQCLAQFEHFERDGDKDMRAEC",  # Hugo MSA B
+                "WRFQDPGRCEEEDERMCGPEMCRCRQK",  # Hugo MSA D
+                "CMFILVWYAGTSNQDEHRKPCMFILVW",
+            ]  # arbitrary sequence
             seq = potts(seq_str)
             energies = [energy(s, seq) for s in 1:N_STRUCTURES]
 
@@ -33,7 +35,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
             logZ = max_neg_energy + log(sum(exp.(neg_energies .- max_neg_energy)))
 
             pnats = exp.(-energies .- logZ)
-            @test sum(pnats) ≈ 1.0 atol=1e-10
+            @test sum(pnats) ≈ 1.0 atol = 1.0e-10
 
             for cm in (1, 2, 3, N_STRUCTURES ÷ 2, N_STRUCTURES - 1, N_STRUCTURES)
                 @test pnat(cm, seq) ≈ pnats[cm]
@@ -58,8 +60,10 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
 
     @testset "Hugo MSA pnat consistency" begin
         # Verify that pnat values stored in the Hugo MSA files match our computation.
-        for (sym, cm) in [(:A, CONTACT_MAP_A), (:B, CONTACT_MAP_B),
-                          (:C, CONTACT_MAP_C), (:D, CONTACT_MAP_D)]
+        for (sym, cm) in [
+                (:A, CONTACT_MAP_A), (:B, CONTACT_MAP_B),
+                (:C, CONTACT_MAP_C), (:D, CONTACT_MAP_D),
+            ]
             msa = Hugo_MSA(sym)
             pnats = Hugo_MSA_pnat(sym)
 
@@ -86,7 +90,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
             msa = Hugo_MSA(sym)
             X = onehot(msa)
             # Site-averaged amino acid frequencies (21 × 27 → marginal over sequences)
-            freq = dropdims(mean(X; dims=3); dims=3)
+            freq = dropdims(mean(X; dims = 3); dims = 3)
 
             # No gap characters should appear
             @test all(freq[21, :] .== 0)
@@ -109,7 +113,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
         seq = rand(1:20, L)
 
         # After sufficient steps at β = 1000, pnat should be high
-        metropolis!(seq, CONTACT_MAP_A; β=1000, nsteps=5000)
+        metropolis!(seq, CONTACT_MAP_A; β = 1000, nsteps = 5000)
         final_pnat = pnat(CONTACT_MAP_A, seq)
         @test final_pnat > 0.95
     end
@@ -122,7 +126,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
             E = energy(cm, seq)
             E_manual = sum(
                 MJ[seq[STRUCTURES[k, cm, 1]], seq[STRUCTURES[k, cm, 2]]]
-                for k in 1:N_CONTACTS
+                    for k in 1:N_CONTACTS
             )
             @test E ≈ E_manual
         end
@@ -146,7 +150,7 @@ jacquin_pnat(cm, seq) = pnat(structure_index(SHAKHNOVICH_STRUCTURES, cm), seq; s
             # All 28 contacts should be unique, independent of pair ordering
             contact_pairs = Set(
                 (min(contacts[k, 1], contacts[k, 2]), max(contacts[k, 1], contacts[k, 2]))
-                for k in 1:N_CONTACTS
+                    for k in 1:N_CONTACTS
             )
             @test length(contact_pairs) == N_CONTACTS
         end

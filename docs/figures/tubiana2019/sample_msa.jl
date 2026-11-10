@@ -22,16 +22,16 @@ S = which == "all" ? STRUCTURES : SHAKHNOVICH_STRUCTURES
 cm = which == "all" ? CONTACT_MAP_A : structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)
 sites = LatticeProteins.site_contacts(S)
 
-results = Vector{Vector{Tuple{Float64,String}}}(undef, nchains)
+results = Vector{Vector{Tuple{Float64, String}}}(undef, nchains)
 seed!(2026)
 t0 = time()
 Threads.@threads for c in 1:nchains
     seq = rand(1:20, L)
-    LatticeProteins.metropolis!(seq, cm, S, sites; β, nsteps=burnin)
-    out = Tuple{Float64,String}[]
+    LatticeProteins.metropolis!(seq, cm, S, sites; β, nsteps = burnin)
+    out = Tuple{Float64, String}[]
     for t in 1:per_chain
-        LatticeProteins.metropolis!(seq, cm, S, sites; β, nsteps=interval)
-        push!(out, (exp(log_pnat(cm, seq; structures=S)), aaseq(seq)))
+        LatticeProteins.metropolis!(seq, cm, S, sites; β, nsteps = interval)
+        push!(out, (exp(log_pnat(cm, seq; structures = S)), aaseq(seq)))
     end
     results[c] = out
 end

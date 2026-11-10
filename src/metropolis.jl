@@ -9,7 +9,7 @@ struct SiteContacts
     partner::Vector{Int32}
 end
 
-function SiteContacts(structures::AbstractArray{Int,3})
+function SiteContacts(structures::AbstractArray{Int, 3})
     check_structures(structures)
     counts = zeros(Int, L)
     for s in axes(structures, 2), k in axes(structures, 1)
@@ -44,7 +44,7 @@ const default_site_contacts = Base.OncePerProcess{SiteContacts}() do
 end
 
 # Per-site contact index of `structures`; cached for the default set.
-site_contacts(structures::AbstractArray{Int,3}) = structures === STRUCTURES ? default_site_contacts() : SiteContacts(structures)
+site_contacts(structures::AbstractArray{Int, 3}) = structures === STRUCTURES ? default_site_contacts() : SiteContacts(structures)
 
 """
     metropolis!(seq::AbstractVector{Int}, cm::Int; β=1, nsteps=1, structures=STRUCTURES)
@@ -73,7 +73,7 @@ rebuilt on every call for any other set; for repeated short runs on another set,
 
 Returns the mutated `seq`.
 """
-function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real=1, nsteps::Int=1, structures::AbstractArray{Int,3}=STRUCTURES)
+function metropolis!(seq::AbstractVector{Int}, cm::Int; β::Real = 1, nsteps::Int = 1, structures::AbstractArray{Int, 3} = STRUCTURES)
     check_sequence(seq)
     return metropolis!(seq, cm, structures, site_contacts(structures); β, nsteps)
 end
@@ -94,11 +94,11 @@ function mutate_energies!(E1::Vector{Float64}, E::Vector{Float64}, seq::Abstract
 end
 
 # Assumes `seq` has been validated with `check_sequence`, and `sites == SiteContacts(structures)`.
-function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArray{Int,3}, sites::SiteContacts; β::Real, nsteps::Int)
+function metropolis!(seq::AbstractVector{Int}, cm::Int, structures::AbstractArray{Int, 3}, sites::SiteContacts; β::Real, nsteps::Int)
     E = energies!(Vector{Float64}(undef, size(structures, 2)), seq, structures) # energies of seq in all structures
     E1 = similar(E) # energies of the proposed sequence
     F = _folding_loss(E, cm)
-    for _ = 1:nsteps
+    for _ in 1:nsteps
         i = rand(1:length(seq)) # randomly select a position in the sequence
         new_aa = rand(1:20)
         if new_aa == seq[i]
@@ -129,10 +129,10 @@ structures (see [`metropolis!`](@ref)).
 
 See also [`metropolis!`](@ref).
 """
-function random_msa(cm::Int; nseqs::Int = 1, β::Real=1, nsteps::Int=1000, structures::AbstractArray{Int,3}=STRUCTURES)
+function random_msa(cm::Int; nseqs::Int = 1, β::Real = 1, nsteps::Int = 1000, structures::AbstractArray{Int, 3} = STRUCTURES)
     sites = site_contacts(structures)
     seqs = rand(1:20, L, nseqs)
-    for n = 1:nseqs
+    for n in 1:nseqs
         metropolis!(view(seqs, :, n), cm, structures, sites; β, nsteps)
     end
     return seqs

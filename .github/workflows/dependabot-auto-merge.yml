@@ -6,13 +6,20 @@ name: Dependabot auto-merge
 # switch it on, so this workflow is only here to press that button. See:
 # https://github.com/dependabot/dependabot-core/issues/4143
 #
-# All update types are included, semver-major among them: every PR is gated by a
-# required CI check, so a breaking bump fails CI and is never merged.
+# All update types are included, semver-major among them: every PR is gated by
+# required CI checks, so a breaking bump fails CI and is never merged.
 #
 # Julia package PRs widen [compat] to admit a new major (e.g. "3" -> "3, 7.1").
-# The required check runs against the new end of the range and the `downgrade`
-# job in ci.yml exercises the old end. Accepted trade-off:
-# a green run is the review those PRs would have received anyway.
+# Both jobs in ci.yml are required: `test` runs against the new end of the range
+# and `downgrade` against the old end. Accepted trade-off: a green run is the
+# review those PRs would have received anyway.
+#
+# Which checks are required is a branch protection setting on `main`; nothing in
+# this repository's files controls it. Checks are matched by job name, so if a
+# job in ci.yml is renamed, branch protection has to be updated with it.
+# Otherwise auto-merge waits forever for a check that never reports. The names:
+#   - Julia 1 - ubuntu-latest - default
+#   - Downgrade compat - Julia min - ubuntu-latest - default
 #
 # Deliberately uses no actions at all -- nothing to pin, nothing to update, and
 # no third party in the merge path.

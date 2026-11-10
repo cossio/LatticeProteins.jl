@@ -41,6 +41,8 @@ jobs:
           # Fork PRs can't access secrets, so their uploads stay best-effort.
           fail_ci_if_error: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
   downgrade:
+    # Required check on `main` (branch protection matches this name exactly), so
+    # it gates Dependabot auto-merge: see dependabot-auto-merge.yml.
     name: Downgrade compat - Julia min - ubuntu-latest - default
     runs-on: ubuntu-latest
     steps:

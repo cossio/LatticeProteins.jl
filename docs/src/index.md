@@ -8,11 +8,8 @@ pairwise contacts between amino acids using the Miyazawa-Jernigan interaction ma
 The probability that a sequence folds into a given "native" structure is computed via a
 Boltzmann distribution over all 103,346 compact structures of the lattice.
 
-This package does not export any symbols; everything is accessed either with the
-`LatticeProteins.` prefix or by importing the names explicitly, e.g.
-`using LatticeProteins: pnat, energy`. The public API consists of the names declared
-`public`, listed in the [Reference](@ref); anything else is internal and may change in
-any release.
+The public API consists of the exported names, listed in the [Reference](@ref); anything
+else is internal and may change in any release.
 
 ## Installation
 
@@ -26,7 +23,7 @@ Pkg.add("LatticeProteins")
 ## Quick start
 
 ```julia
-using LatticeProteins: pnat, energy, potts, random_msa, STRUCTURE_A
+using LatticeProteins
 
 # Compute the probability that a sequence folds into structure A
 seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")  # convert to integer-coded sequence

@@ -11,9 +11,8 @@ LatticeProteins
 ## Public API
 
 The public API is the model in which all 103,346 compact structures of the lattice compete
-to fold a sequence. It consists of the names below, which are declared `public`. None of
-them are exported, so they must be accessed with the `LatticeProteins.` prefix or imported
-explicitly (e.g. `using LatticeProteins: pnat`).
+to fold a sequence. It consists of the names below. They are exported, except
+[`L`](@ref), which is declared `public` and accessed as `LatticeProteins.L`.
 
 ### Sequences
 
@@ -30,10 +29,10 @@ onehot
 
 ### Structures
 
-A structure is referred to by its index, in `1:N_STRUCTURES`.
+A structure is referred to by its index among all compact structures.
 
 ```@docs
-N_STRUCTURES
+enumerate_structures
 contact_map
 STRUCTURE_A
 STRUCTURE_B
@@ -69,13 +68,13 @@ parallel_tempering
 
 Internally, the structures that compete to fold a sequence form a [`StructureSet`](@ref).
 Every function of the public API that takes a structure index also accepts a keyword
-argument `structures`, by default [`STRUCTURES`](@ref); the index then refers to that set.
+argument `structures`, by default [`enumerate_structures`](@ref)`()`; the index then refers
+to that set.
 This is how the documentation reproduces the model of Jacquin et al. (2016), where only a
 subset of 10,000 structures compete ([`shakhnovich_structures`](@ref)).
 
 ```@docs
 StructureSet
-STRUCTURES
 shakhnovich_structures
 structure_index
 energies

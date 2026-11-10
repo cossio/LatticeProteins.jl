@@ -9,8 +9,9 @@ determined by pairwise contacts using the Miyazawa-Jernigan interaction matrix. 
 probability that a sequence folds into a structure is a Boltzmann distribution over all
 103,346 compact structures of the lattice, which compete to fold the sequence.
 
-The package exports no names. Its public API is the list of names declared `public`
-(see `names(LatticeProteins)`); everything else is internal and can change in any release.
+The public API is the list of exported names, plus the sequence length `L`, which is
+declared `public` but not exported (see `names(LatticeProteins)`). Everything else is
+internal and can change in any release.
 
 # References
 
@@ -25,13 +26,15 @@ using DelimitedFiles: readdlm
 using Random: AbstractRNG, Xoshiro, default_rng, randexp
 
 # Sequences
-public L, potts, aaseq, onehot
+export potts, aaseq, onehot
 # Structures
-public N_STRUCTURES, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
+export enumerate_structures, contact_map, STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 # Energy and folding probability
-public MJ, energy, pnat, log_pnat
+export MJ, energy, pnat, log_pnat
 # Sampling
-public metropolis!, random_msa, parallel_tempering
+export metropolis!, random_msa, parallel_tempering
+# A one-letter name would be a poor thing to bring into the namespace of every user.
+public L
 
 """
     L

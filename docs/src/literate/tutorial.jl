@@ -10,20 +10,17 @@
 
 # ## Setup
 #
-# Since the package does not export any symbols, we import the names we need
-# explicitly. (Alternatively, everything is reachable through the `LatticeProteins.`
-# prefix.)
+# The package exports its public API:
 
-using LatticeProteins: pnat, log_pnat, energy, onehot, aaseq, potts,
-    metropolis!, random_msa, contact_map, N_STRUCTURES, STRUCTURE_A, STRUCTURE_B
+using LatticeProteins
 
 # A lattice protein is a chain of 27 amino acids folded onto a 3×3×3 cubic lattice.
 # There are 103,346 maximally compact structures (counted up to rotations and reflections
 # of the cube), which the package enumerates when it is installed:
 
-N_STRUCTURES
+length(enumerate_structures())
 
-# Structures are referred to by their index, from 1 to `N_STRUCTURES`. Four of them are
+# Structures are referred to by their index in this enumeration. Four of them are
 # highlighted in Jacquin et al. (2016), and their indices are the constants `STRUCTURE_A`,
 # `STRUCTURE_B`, `STRUCTURE_C` and `STRUCTURE_D`:
 

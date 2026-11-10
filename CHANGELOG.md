@@ -9,42 +9,43 @@ compact structures compete, and a single energy kernel shared by all samplers.
 
 ### Breaking
 
-- **Public API.** The public names are declared `public`: `L`, `potts`, `aaseq`,
-  `onehot`; `N_STRUCTURES`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`;
-  `MJ`, `energy`, `pnat`, `log_pnat`; `metropolis!`, `random_msa`, `parallel_tempering`.
-  Everything else is internal and can change in any release.
-- **Structures** are referred to by their index in `1:N_STRUCTURES`, and
-  `contact_map(s)` gives the contacts of structure `s`. The array `STRUCTURES` and the
-  function `enumerate_structures` are no longer part of the API.
+- **Public API.** The package now exports its public names: `potts`, `aaseq`, `onehot`;
+  `enumerate_structures`, `contact_map`, `STRUCTURE_A`, ..., `STRUCTURE_D`; `MJ`, `energy`,
+  `pnat`, `log_pnat`; `metropolis!`, `random_msa`, `parallel_tempering`. The sequence
+  length `L` is public but not exported. Everything else is internal and can change in
+  any release. Since 2.x exported nothing, `using LatticeProteins` now brings these
+  names into scope.
+- **Structures.** `enumerate_structures()` returns the set of all compact structures,
+  computed once, instead of recomputing an array at each call.
+  `length(enumerate_structures())` is their number and `contact_map(s)` gives the
+  contacts of structure `s`; these replace `N_STRUCTURES` and indexing `STRUCTURES`.
 - **Reference structures.** `CONTACT_MAP_A`, ..., `CONTACT_MAP_D` are renamed
   `STRUCTURE_A`, ..., `STRUCTURE_D`: they are indices of structures, not contact maps.
-- **Other sets of competing structures are internal.** This covers the `structures`
-  keyword argument, the subset of 10,000 structures of Jacquin et al. (2016), now
-  `LatticeProteins.shakhnovich_structures()` instead of the constant
-  `SHAKHNOVICH_STRUCTURES`, `structure_index`, and the reference alignments
-  `Hugo_MSA`, `Hugo_MSA_pnat`, `Hugo_MSA_path`, which were sampled with that subset.
-  They remain available, and are used by the documentation and the tests, but without
-  stability guarantees. A set of structures is a `LatticeProteins.StructureSet`
-  instead of a bare `(ncontacts, nstructures, 2)` array. The subset is downloaded the
-  first time it is requested, no longer when the package is installed.
+- **The subset of 10,000 structures** of Jacquin et al. (2016) is not part of the public
+  API, nor is anything that only serves it: the `structures` keyword argument,
+  `structure_index`, and the reference alignments `Hugo_MSA`, `Hugo_MSA_pnat`,
+  `Hugo_MSA_path`, which were sampled with that subset. The documentation and the tests
+  still use them. The subset is `LatticeProteins.shakhnovich_structures()` instead of
+  the constant `SHAKHNOVICH_STRUCTURES`, a `LatticeProteins.StructureSet` instead of a
+  bare `(ncontacts, nstructures, 2)` array, and is downloaded the first time it is
+  requested instead of when the package is installed.
 - **`metropolis!` and `random_msa`** make the same moves as `parallel_tempering`: a step
   proposes one of the 19 *other* amino acids at a random position, where it used to
   propose any of the 20 (leaving the sequence unchanged one time in 20). The stationary
   distribution is the same; seeded trajectories differ from 2.x.
 - **Errors.** Invalid arguments throw an `ArgumentError`: sequences of the wrong length
   or with amino acids outside `1:20` (previously an `AssertionError`), and structure
-  indices outside `1:N_STRUCTURES` (previously a `BoundsError`).
+  indices that are out of range (previously a `BoundsError`).
 - **`potts`** throws an `ArgumentError` for characters outside the alphabet, which it
   used to code silently as cysteine (index 1), and for sequences of unequal lengths.
 - **Removed** `load_contact_maps`, `load_miyazawa_jernigan_matrix` and
   `load_miyazawa_jernigan_aminoacids`: use `MJ`.
-- `AMINO_ACIDS`, `energies` and `N_CONTACTS` are internal.
 
 | 2.x | 3.0 |
 |:--|:--|
 | `CONTACT_MAP_A` | `STRUCTURE_A` |
 | `STRUCTURES[:, s, :]` | `contact_map(s)` |
-| `size(STRUCTURES, 2)` | `N_STRUCTURES` |
+| `N_STRUCTURES`, `size(STRUCTURES, 2)` | `length(enumerate_structures())` |
 | `SHAKHNOVICH_STRUCTURES` | `LatticeProteins.shakhnovich_structures()` (internal) |
 | `structure_index(SHAKHNOVICH_STRUCTURES, CONTACT_MAP_A)` | `LatticeProteins.structure_index(LatticeProteins.shakhnovich_structures(), STRUCTURE_A)` (internal) |
 

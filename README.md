@@ -19,13 +19,11 @@ Pkg.add("LatticeProteins")
 
 ## Quick start
 
-The package does not export any names: import the ones you need, or use the
-`LatticeProteins.` prefix. The names in the tables below are the public API (they are
-declared `public`); anything else is internal and may change in any release.
+The names in the tables below are the public API, and are exported. Anything else is
+internal and may change in any release.
 
 ```julia
-using LatticeProteins: pnat, energy, onehot, aaseq, potts, random_msa, contact_map,
-    STRUCTURE_A
+using LatticeProteins
 
 # Compute the probability that a sequence folds into structure A
 seq = potts("EKAMPAMDPDMAHEHKKKIRAWMFEGE")  # convert to integer-coded sequence
@@ -51,11 +49,11 @@ cm = contact_map(STRUCTURE_A)
 
 ### Structures
 
-A structure is referred to by its index, from 1 to `N_STRUCTURES`.
+A structure is referred to by its index, from 1 to 103,346.
 
 | Symbol | Description |
 |--------|-------------|
-| `N_STRUCTURES` | Number of compact structures (103,346) |
+| `enumerate_structures()` | The set of all compact structures; `length(enumerate_structures())` is 103,346 |
 | `contact_map(s)` | Contact map of structure `s`: a `28 × 2` matrix of pairs of residue positions |
 | `STRUCTURE_A`, `STRUCTURE_B`, `STRUCTURE_C`, `STRUCTURE_D` | Indices of four reference structures from Jacquin et al. (2016) |
 
@@ -75,7 +73,7 @@ A structure is referred to by its index, from 1 to `N_STRUCTURES`.
 | `onehot(seq)` | One-hot encode amino acid sequence(s) |
 | `potts(seq)` | Convert to integer-coded (Potts) representation: indices in the alphabet `"CMFILVWYAGTSNQDEHRKP-"` |
 | `aaseq(X)` | Convert from one-hot or integer coding back to amino acid string(s) |
-| `L` | Sequence length (27) |
+| `LatticeProteins.L` | Sequence length (27); public, but not exported |
 
 ### Sampling
 
@@ -88,7 +86,7 @@ A structure is referred to by its index, from 1 to `N_STRUCTURES`.
 For strong selection, run replicas over a fixed ladder from weak to strong selection:
 
 ```julia
-using LatticeProteins: parallel_tempering, STRUCTURE_A
+using LatticeProteins
 using Random: Xoshiro
 
 # Starting ladder for a pilot; inspect diagnostics before a production run.

@@ -75,7 +75,7 @@ short ones.
 
 # Arguments
 - `seq`: integer-coded amino acid sequence of length 27 (values in `1:20`).
-- `s`: index of the target structure, in `1:N_STRUCTURES`.
+- `s`: index of the target structure, between 1 and 103,346.
 - `β`: inverse temperature (higher values favor sequences that fold into `s`).
 - `nsteps`: number of Monte Carlo steps to perform.
 - `rng`: random number generator.

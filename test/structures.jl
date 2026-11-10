@@ -1,6 +1,6 @@
 using Test: @test, @testset, @test_throws
 using LatticeProteins: LatticeProteins, StructureSet, STRUCTURES, shakhnovich_structures,
-    contact_map, structure_index, N_STRUCTURES, N_CONTACTS, L,
+    enumerate_structures, contact_map, structure_index, N_STRUCTURES, N_CONTACTS, L,
     STRUCTURE_A, STRUCTURE_B, STRUCTURE_C, STRUCTURE_D
 
 const S10 = shakhnovich_structures()
@@ -13,6 +13,9 @@ reverse_structure(cm) = [L + 1 - cm[k, 3 - c] for k in axes(cm, 1), c in 1:2]
     @test L == 27
     @test N_CONTACTS == 28
     @test N_STRUCTURES == length(STRUCTURES) == 103_346
+    # the public handle on the compact structures is the set enumerated at precompilation
+    @test enumerate_structures() === STRUCTURES
+    @test length(enumerate_structures()) == 103_346
     @test length(S10) == 10_000
     @test shakhnovich_structures() === S10 # built once
     @test STRUCTURES isa StructureSet && S10 isa StructureSet

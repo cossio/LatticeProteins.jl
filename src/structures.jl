@@ -49,7 +49,8 @@ The functions that take a structure index ([`contact_map`](@ref), [`energy`](@re
 competing structures as the keyword argument `structures`, and the index then refers to
 that set. The package has two sets:
 
-- [`STRUCTURES`](@ref): all 103,346 compact structures of the lattice (the default);
+- [`enumerate_structures`](@ref)`()`: all 103,346 compact structures of the lattice (the
+  default);
 - [`shakhnovich_structures`](@ref)`()`: the subset of 10,000 structures used by Jacquin et
   al. (2016).
 
@@ -129,25 +130,13 @@ end
 """
     contact_map(s)
 
-Contact map of structure `s`, one of the `N_STRUCTURES` = 103,346 compact structures of a
-27-mer on the 3×3×3 cubic lattice: a `Matrix{Int}` of size `(28, 2)` whose rows are the
-pairs `(i, j)` of residue positions in contact, with `i < j`, sorted lexicographically.
-
-The structures are all the self-avoiding walks visiting the 27 lattice sites, modulo the 48
-rotations and reflections of the cube, numbered in a fixed order. The chain direction is
-kept: reversing the chain maps contact `(i, j)` to `(28 - j, 28 - i)`, which in general
-gives a different contact map, so a structure and its chain reversal count as distinct
-structures (62 of them are their own reversal).
+Contact map of structure `s`, one of the 103,346 compact structures of
+[`enumerate_structures`](@ref): a `Matrix{Int}` of size `(28, 2)` whose rows are the pairs
+`(i, j)` of residue positions in contact, with `i < j`, sorted lexicographically.
 
 ```julia
 contact_map(STRUCTURE_A)  # the 28 contacts of structure A
 ```
-
-# References
-
-- Shakhnovich, E. I., and A. M. Gutin. "Enumeration of all compact conformations of
-  copolymers with random sequence of links." *The Journal of Chemical Physics* 93.8
-  (1990): 5967-5971.
 """
 function contact_map(s::Integer; structures::StructureSet = STRUCTURES)
     check_structure(structures, s)
@@ -167,7 +156,8 @@ it is not there. `cm` is a matrix of contact pairs as returned by [`contact_map`
 of the contacts and the order within each pair are ignored.
 
 The second method looks for structure `s` of the set `from` (by default
-[`STRUCTURES`](@ref)), and so translates structure indices from one set to another.
+[`enumerate_structures`](@ref)`()`), and so translates structure indices from one set to
+another.
 
 # Example
 
@@ -194,24 +184,33 @@ end
 
 structure_index(S::StructureSet, s::Integer; from::StructureSet = STRUCTURES) = structure_index(S, contact_map(s; structures = from))
 
-"""
-    STRUCTURES
-
-The [`StructureSet`](@ref) of all 103,346 compact structures of a 27-mer on the 3×3×3
-cubic lattice (see [`contact_map`](@ref)), enumerated when the package is precompiled.
-
-This is the set of competing structures of the public API, and the default value of the
-internal keyword argument `structures`. See [`shakhnovich_structures`](@ref) for the
-representative subset of 10,000 structures used by Jacquin et al. (2016).
-"""
+# Enumerated when the package is precompiled, which takes about a second.
 const STRUCTURES = StructureSet(compact_contact_maps())
 
 """
-    N_STRUCTURES
+    enumerate_structures()
 
-Number of compact structures of a 27-mer on the 3×3×3 cubic lattice (103,346). Structures
-are referred to by their index in `1:N_STRUCTURES`; see [`contact_map`](@ref).
+The set of all compact structures of a 27-mer on the 3×3×3 cubic lattice: all the
+self-avoiding walks visiting the 27 lattice sites, modulo the 48 rotations and reflections
+of the cube. There are `length(enumerate_structures())` = 103,346 of them, and a structure
+is referred to by its index in this set; [`contact_map`](@ref) gives its contacts.
+
+The chain direction is kept: reversing the chain maps contact `(i, j)` to
+`(28 - j, 28 - i)`, which in general gives a different contact map, so a structure and its
+chain reversal count as distinct structures (62 of them are their own reversal).
+
+The structures are enumerated once, in a fixed order, when the package is precompiled:
+calling this function costs nothing, and always returns the same object.
+
+# References
+
+- Shakhnovich, E. I., and A. M. Gutin. "Enumeration of all compact conformations of
+  copolymers with random sequence of links." *The Journal of Chemical Physics* 93.8
+  (1990): 5967-5971.
 """
+enumerate_structures() = STRUCTURES
+
+# Number of compact structures (103,346).
 const N_STRUCTURES = length(STRUCTURES)
 
 # The subset is read from an artifact that is downloaded on first use, so it is not loaded
@@ -228,7 +227,7 @@ end
 
 The [`StructureSet`](@ref) of the representative subset of 10,000 compact structures
 selected by the Shakhnovich group (Heo, Maslov & Shakhnovich, 2011) out of the 103,346 of
-[`STRUCTURES`](@ref), and used as the set of competing structures by Jacquin et al. (2016)
+[`enumerate_structures`](@ref), and used as the set of competing structures by Jacquin et al. (2016)
 and Tubiana et al. (2019).
 
 Pass `structures = shakhnovich_structures()` to [`pnat`](@ref), [`metropolis!`](@ref) and
@@ -260,31 +259,31 @@ shakhnovich_structures() = shakhnovich_set()
 """
     STRUCTURE_A
 
-Index of reference structure A of Jacquin et al. (2016) among the `N_STRUCTURES` compact
-structures. It is structure 625 of the subset of 10,000 structures used in that paper.
+Index of reference structure A of Jacquin et al. (2016) among the compact structures
+([`enumerate_structures`](@ref)). It is structure 625 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_A = 22451
 
 """
     STRUCTURE_B
 
-Index of reference structure B of Jacquin et al. (2016) among the `N_STRUCTURES` compact
-structures. It is structure 848 of the subset of 10,000 structures used in that paper.
+Index of reference structure B of Jacquin et al. (2016) among the compact structures
+([`enumerate_structures`](@ref)). It is structure 848 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_B = 65036
 
 """
     STRUCTURE_C
 
-Index of reference structure C of Jacquin et al. (2016) among the `N_STRUCTURES` compact
-structures. It is structure 6683 of the subset of 10,000 structures used in that paper.
+Index of reference structure C of Jacquin et al. (2016) among the compact structures
+([`enumerate_structures`](@ref)). It is structure 6683 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_C = 66913
 
 """
     STRUCTURE_D
 
-Index of reference structure D of Jacquin et al. (2016) among the `N_STRUCTURES` compact
-structures. It is structure 6685 of the subset of 10,000 structures used in that paper.
+Index of reference structure D of Jacquin et al. (2016) among the compact structures
+([`enumerate_structures`](@ref)). It is structure 6685 of the subset of 10,000 structures used in that paper.
 """
 const STRUCTURE_D = 90697

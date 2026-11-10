@@ -14,7 +14,7 @@ This page reproduces Fig. 4 of
 
 with alignments sampled by this package, first against the subset of 10,000 structures
 used in the paper ([`shakhnovich_structures`](@ref)) and then against all 103,346 compact
-structures ([`STRUCTURES`](@ref)). The full-structure figure uses the saved
+structures ([`enumerate_structures`](@ref)). The full-structure figure uses the saved
 parallel-tempering alignment of 316,000 sequences from four independent ladders,
 with all monitored convergence criteria met. The figures below are pre-rendered;
 they are not regenerated when the documentation is built (see
@@ -96,7 +96,7 @@ basins the 4 chains fell into rather than by the model.
 
 ## Version 2: against all 103,346 compact structures
 
-This version uses [`parallel_tempering`](@ref) against `STRUCTURES`, with four independent
+This version uses [`parallel_tempering`](@ref) against all compact structures, with four independent
 ladders and a cold replica at ``\beta = 1000``. Each ladder has 26 replicas: ``\beta=0``
 and 25 logarithmically spaced values from 0.1 to 1000. The physical folding temperature
 remains 1. Each round performs five single-residue mutation proposals per replica,

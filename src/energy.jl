@@ -47,7 +47,7 @@ Miyazawa-Jernigan interaction energies ([`MJ`](@ref)) over the pairs of residues
 contact in that structure ([`contact_map`](@ref)).
 
 `seq` is a vector of length 27 of amino acid indices in `1:20` (see [`potts`](@ref)), and
-`s` the index of a structure, in `1:N_STRUCTURES`.
+`s` the index of a structure, between 1 and 103,346 (see [`enumerate_structures`](@ref)).
 """
 function energy(s::Integer, seq::AbstractVector{<:Integer}; structures::StructureSet = STRUCTURES)
     check_sequence(seq)
@@ -75,8 +75,8 @@ end
 Log-probability that sequence `seq` folds into structure `s` (the "native" structure), as
 opposed to any of the other compact structures.
 
-The probability is a Boltzmann distribution at temperature 1 over all `N_STRUCTURES` =
-103,346 compact structures of the lattice:
+The probability is a Boltzmann distribution at temperature 1 over all 103,346 compact
+structures of the lattice ([`enumerate_structures`](@ref)):
 
 ```math
 \\log P_\\text{nat}(s \\mid \\text{seq}) = -\\log \\sum_{s'} \\exp\\bigl(E(s, \\text{seq}) - E(s', \\text{seq})\\bigr)

@@ -1,10 +1,9 @@
 coverage:
   status:
-    # Overall repository coverage: must not drop by more than 1% in a PR.
+    # Overall repository coverage: must stay at or above this floor.
     project:
       default:
-        target: auto
-        threshold: 1%
+        target: 95%
     # Coverage of the lines changed/added by a PR: forces new code to come with tests.
     patch:
       default:
